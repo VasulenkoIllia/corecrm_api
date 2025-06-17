@@ -7,6 +7,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaService } from '../../infrastructure/db/prisma.service';
 import { RoleService } from '../../infrastructure/db/role.service';
+import { RedisService } from '../../infrastructure/redis/redis.service';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -19,9 +21,10 @@ import { RoleService } from '../../infrastructure/db/role.service';
       }),
       inject: [ConfigService],
     }),
+    MailModule
   ],
   controllers: [AuthController],
-  providers: [AuthService, UserService, PrismaService, RoleService],
+  providers: [AuthService, UserService, PrismaService, RoleService, RedisService],
   exports: [AuthService],
 })
 export class AuthModule {}

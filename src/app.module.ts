@@ -4,7 +4,8 @@ import { UserModule } from './components/user/user.module'; // Модуль дл
 import { AuthModule } from './components/auth/auth.module'; // Модуль для автентифікації
 import { AppConfigInfrastructureModule } from './infrastructure/app-config/app-config.infrastructure.module'; // Модуль конфігурації додатку
 import { DbInfrastructureModule } from './infrastructure/db/db.infrastructure.module'; // Модуль для роботи з базою даних
-import { MappingInfrastructureModule } from './infrastructure/mapping/mapping.infrastructure.module'; // Модуль для маппінгу об'єктів
+import { MappingInfrastructureModule } from './infrastructure/mapping/mapping.infrastructure.module';
+import { MailModule } from './components/mail/mail.module'; // Модуль для маппінгу об'єктів
 
 /**
  * Головний модуль додатку
@@ -17,6 +18,7 @@ import { MappingInfrastructureModule } from './infrastructure/mapping/mapping.in
     MappingInfrastructureModule.registerProfilesAsync(), // Імпорт та реєстрація профілів маппінгу
     UserModule, // Імпорт модуля для роботи з користувачами
     AuthModule, // Імпорт модуля для автентифікації
+    MailModule
   ],
 })
 /**

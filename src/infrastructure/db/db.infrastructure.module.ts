@@ -10,6 +10,8 @@ import { AuthService } from '../../components/auth/auth.service';
 import { DbInfrastructure } from './db.infrastructure';
 import { JwtGuard } from '../../components/auth/guards/jwt.guard';
 import { AccessControlService } from '../../components/access-control/access-control.service';
+import { MailModule } from '../../components/mail/mail.module';
+import { RedisModule } from '../redis/redis.module'; // Додаємо MailModule
 
 @Global()
 @Module({
@@ -31,6 +33,8 @@ import { AccessControlService } from '../../components/access-control/access-con
       }),
       inject: [ConfigService],
     }),
+    MailModule,
+    RedisModule
   ],
   providers: [
     appConfigProvider,

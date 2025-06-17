@@ -8,14 +8,20 @@ datasource db {
 }
 
 model User {
-  id        Int            @id @default(autoincrement())
-  email     String         @unique
-  password  String
-  roleId    Int?
-  role      Role?          @relation(fields: [roleId], references: [id])
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  companies CompanyUsers[]
+  id                Int            @id @default(autoincrement())
+  email             String         @unique
+  password          String
+  name              String
+  roleId            Int?
+  role              Role?          @relation(fields: [roleId], references: [id])
+  isEmailConfirmed  Boolean        @default(false)
+  confirmationToken String?        @unique
+  resetToken        String?        @unique
+  resetTokenExpires DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  companies         CompanyUsers[]
+  invitations       Invitations[]
 }
 
 model Role {
@@ -36,6 +42,7 @@ model Company {
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   users              CompanyUsers[]
+  invitations        Invitations[]
 }
 
 model CompanyUsers {
@@ -48,4 +55,16 @@ model CompanyUsers {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, companyId])
+}
+
+model Invitations {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  email     String
+  companyId Int
+  creatorId Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  company   Company  @relation(fields: [companyId], references: [id])
+  creator   User     @relation(fields: [creatorId], references: [id])
 }

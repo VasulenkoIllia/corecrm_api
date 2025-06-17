@@ -3,8 +3,7 @@ import { SecureEndpoint } from '../../common/decorators/secure-endpoint.decorato
 import { IAuthorizedRequest } from '../../common/interfaces/common/authorized-request.interface';
 import { UserService } from './user.service';
 import { UserResponseDTO } from '../../common/dto/user/user.response.dto';
-import { ApiResponse } from '../../common/decorators/api-response.decorator';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 /**
  * Контролер для роботи з користувачами
@@ -18,7 +17,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @SecureEndpoint('me', RequestMethod.GET)
-  @ApiResponse(UserResponseDTO)
+  @ApiOkResponse({ type: UserResponseDTO })
   async getMe(@Req() req: IAuthorizedRequest): Promise<UserResponseDTO> {
     try {
       this.logger.log(`Fetching user data for ID: ${req.user.id}`);
@@ -31,11 +30,10 @@ export class UserController {
 
       this.logger.log(`User data retrieved successfully for ID: ${req.user.id}`);
 
-      // Трансформуємо дані для відповідності UserResponseDTO
       return {
         id: user.id,
         email: user.email,
-        role: user.role?.name ?? 'employee', // Використовуємо name ролі або значення за замовчуванням
+        role: user.role?.name ?? 'employee',
       };
     } catch (error) {
       this.logger.error(`Failed to fetch user data for ID ${req.user.id}: ${error.message}`);

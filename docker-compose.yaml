@@ -1,9 +1,9 @@
-name: template_nest
+name: corecrm_api
 services:
   postgres:
     image: postgres:13.3
     environment:
-      POSTGRES_DB: template_nest
+      POSTGRES_DB: corecrm_api
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
     ports:
@@ -13,5 +13,23 @@ services:
     stdin_open: true
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - 6379:6379
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --save 60 1 --loglevel warning
+
+#  mailhog:
+#    image: mailhog/mailhog
+#    ports:
+#      - 1025:1025 # SMTP server
+#      - 8025:8025 # Web UI
+#    restart: unless-stopped
+
 volumes:
   postgres_data:
+  redis_data:

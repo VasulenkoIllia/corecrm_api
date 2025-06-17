@@ -2,37 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EnvVariables } from './env-variables';
 
-// Сервіс для доступу до конфігураційних змінних
 @Injectable()
 export class AppConfig {
   private readonly logger = new Logger(AppConfig.name);
 
   constructor(private readonly configService: ConfigService<EnvVariables>) {
     this.validateRequiredEnvVariables();
-  }
-
-  // Перевірка наявності обов’язкових змінних середовища
-  private validateRequiredEnvVariables(): void {
-    const requiredVars: (keyof EnvVariables)[] = [
-      'DB_HOST',
-      'DB_PORT',
-      'DB_USERNAME',
-      'DB_PASSWORD',
-      'DB_NAME',
-      'PORT',
-      'JWT_SECRET',
-      'JWT_EXPIRES_IN',
-      'BCRYPT_SALT_ROUNDS',
-      'ADMIN_EMAIL',
-      'ADMIN_PASSWORD',
-    ];
-
-    for (const varName of requiredVars) {
-      if (this.configService.get(varName) == null) {
-        this.logger.error(`Missing required environment variable: ${varName}`);
-        throw new Error(`Environment variable ${varName} is not defined`);
-      }
-    }
   }
 
   public get BASE_SITE_URL(): string | undefined {
@@ -146,9 +121,34 @@ export class AppConfig {
   public get SWAGGER_DESCRIPTION(): string | undefined {
     return this.configService.get<string>('SWAGGER_DESCRIPTION');
   }
+
+  private validateRequiredEnvVariables(): void {
+    const requiredVars: (keyof EnvVariables)[] = [
+      'DB_HOST',
+      'DB_PORT',
+      'DB_USERNAME',
+      'DB_PASSWORD',
+      'DB_NAME',
+      'PORT',
+      'JWT_SECRET',
+      'JWT_EXPIRES_IN',
+      'BCRYPT_SALT_ROUNDS',
+      'ADMIN_EMAIL',
+      'ADMIN_PASSWORD',
+      'SMTP_HOST', // Додаємо SMTP-зміни
+      'SMTP_PORT',
+      'SMTP_SENDER_EMAIL',
+    ];
+
+    for (const varName of requiredVars) {
+      if (this.configService.get(varName) == null) {
+        this.logger.error(`Missing required environment variable: ${varName}`);
+        throw new Error(`Environment variable ${varName} is not defined`);
+      }
+    }
+  }
 }
 
-// Провайдер для AppConfig
 export const appConfigProvider = {
   provide: AppConfig,
   useFactory: (configService: ConfigService<EnvVariables>) => new AppConfig(configService),

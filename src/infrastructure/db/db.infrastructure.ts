@@ -4,7 +4,6 @@ import { RoleService } from './role.service';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from '../../components/user/user.service';
 
-// Клас відповідає за ініціалізацію бази даних та основних компонентів при старті додатку
 @Injectable()
 export class DbInfrastructure implements OnModuleInit {
   private readonly logger = new Logger(DbInfrastructure.name);
@@ -16,22 +15,19 @@ export class DbInfrastructure implements OnModuleInit {
     private readonly configService: ConfigService,
   ) {}
 
-  // Метод викликається автоматично NestJS при ініціалізації модуля
   async onModuleInit() {
     await this.initialize();
   }
 
-  // Виконує послідовну ініціалізацію: підключення до БД, ролі, адмін-акаунт
   async initialize(): Promise<void> {
     await this.checkDbConnection();
     await this.initRoles();
     await this.initDefaultAdminAccount();
   }
 
-  // Перевіряє підключення до бази даних із кількома спробами
   private async checkDbConnection(): Promise<void> {
     let retries = 3;
-    const retryDelay = 2000; // Затримка 2 секунди між спробами
+    const retryDelay = 2000;
 
     while (retries > 0) {
       try {
@@ -52,7 +48,6 @@ export class DbInfrastructure implements OnModuleInit {
     }
   }
 
-  // Ініціалізує ролі, якщо вони ще не існують у базі даних
   private async initRoles(): Promise<void> {
     try {
       const existingRoles = await this.roleService.getAllRoles();
@@ -68,7 +63,6 @@ export class DbInfrastructure implements OnModuleInit {
     }
   }
 
-  // Створює обліковий запис адміністратора, якщо він ще не існує
   private async initDefaultAdminAccount(): Promise<void> {
     try {
       const adminEmail = this.configService.get<string>('ADMIN_EMAIL', 'admin@example.com');

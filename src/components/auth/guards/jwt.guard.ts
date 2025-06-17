@@ -14,7 +14,6 @@ import { AppConfig } from '../../../infrastructure/app-config/app-config.infrast
 import { IS_PUBLIC_KEY } from './public.guard';
 import { IS_ADMIN_KEY } from './admin.guard';
 
-// Інтерфейс для типізації запиту з користувачем
 interface IAuthorizedRequest extends Request {
   user: IJwtPayload;
 }
@@ -30,7 +29,6 @@ export class JwtGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Перевірка, чи ендпоінт є публічним
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -50,32 +48,27 @@ export class JwtGuard implements CanActivate {
     }
 
     try {
-      // Верифікація токена
       const payload = await this.jwtService.verifyAsync<IJwtPayload>(token, {
         secret: this.appConfig.JWT_SECRET,
       });
 
-      // Перевірка наявності обов’язкових полів у payload
-      if (!payload.id || !payload.email || !payload.role) {
+      if (!payload.id || !payload.email || !payload.role || (!payload.companyId) && payload.role !== 'superadmin') {
         this.logger.warn('Invalid JWT payload structure.');
         throw new UnauthorizedException('Invalid token payload');
       }
 
-      // Перевірка, чи потрібна роль ADMIN
       const isAdmin = this.reflector.getAllAndOverride<boolean>(IS_ADMIN_KEY, [
         context.getHandler(),
         context.getClass(),
       ]);
 
-      if (isAdmin && payload.role !== 'ADMIN') {
+      if (isAdmin && payload.role !== 'superadmin') {
         this.logger.warn(`User ${payload.email} attempted to access admin-only endpoint.`);
-        throw new ForbiddenException('Admin role required');
+        throw new ForbiddenException('Superadmin role required');
       }
 
-      // Присвоєння payload до запиту
       request.user = payload;
-      this.logger.debug(`JWT validated for user ${payload.email} with role ${payload.role}.`);
-
+      this.logger.debug(`JWT validated for user ${payload.email} with role ${payload.role}`);
       return true;
     } catch (error) {
       this.logger.error(`JWT validation failed: ${error.message}`);

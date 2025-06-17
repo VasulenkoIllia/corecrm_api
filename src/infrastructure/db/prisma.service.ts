@@ -1,8 +1,6 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { AppConfig } from '../app-config/app-config.infrastructure';
 import { connectPrisma, disconnectPrisma, prisma } from './prisma.config';
-
-
 
 @Injectable()
 export class PrismaService implements OnModuleInit, OnModuleDestroy {
@@ -38,6 +36,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.client.$executeRaw`TRUNCATE TABLE "Role" CASCADE;`;
       await this.client.$executeRaw`TRUNCATE TABLE "User" CASCADE;`;
+      await this.client.$executeRaw`TRUNCATE TABLE "Company" CASCADE;`;
+      await this.client.$executeRaw`TRUNCATE TABLE "CompanyUsers" CASCADE;`;
       this.logger.log('Database cleared successfully.');
     } catch (error) {
       this.logger.error(`Failed to clear database: ${error.message}`);

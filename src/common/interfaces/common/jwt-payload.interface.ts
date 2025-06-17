@@ -6,4 +6,5 @@ export interface IJwtPayload {
   id: number;      // Ідентифікатор користувача
   email: string;   // Електронна пошта користувача
   role: string;    // Роль користувача в системі
+  companyId?: number;
 }

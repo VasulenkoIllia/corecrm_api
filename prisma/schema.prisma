@@ -1,20 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
+  id        Int            @id @default(autoincrement())
+  email     String         @unique
   password  String
   roleId    Int?
-  role      Role?    @relation(fields: [roleId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role      Role?          @relation(fields: [roleId], references: [id])
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  companies CompanyUsers[]
 }
 
 model Role {
@@ -24,4 +25,27 @@ model Role {
   users       User[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Company {
+  id                 Int            @id @default(autoincrement())
+  name               String
+  status             String         @default("active")
+  subscriptionStatus String         @default("active")
+  modules            Json           @default("{}")
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  users              CompanyUsers[]
+}
+
+model CompanyUsers {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  companyId Int
+  user      User     @relation(fields: [userId], references: [id])
+  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, companyId])
 }

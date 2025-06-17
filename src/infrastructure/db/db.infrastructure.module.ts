@@ -9,7 +9,7 @@ import { UserService } from '../../components/user/user.service';
 import { AuthService } from '../../components/auth/auth.service';
 import { DbInfrastructure } from './db.infrastructure';
 import { JwtGuard } from '../../components/auth/guards/jwt.guard';
-
+import { AccessControlService } from '../../components/access-control/access-control.service';
 
 @Global()
 @Module({
@@ -40,6 +40,7 @@ import { JwtGuard } from '../../components/auth/guards/jwt.guard';
     AuthService,
     DbInfrastructure,
     JwtGuard,
+    AccessControlService,
   ],
   exports: [
     appConfigProvider,
@@ -49,6 +50,7 @@ import { JwtGuard } from '../../components/auth/guards/jwt.guard';
     AuthService,
     DbInfrastructure,
     JwtGuard,
+    AccessControlService,
   ],
 })
 export class DbInfrastructureModule {}

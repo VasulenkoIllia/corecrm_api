@@ -16,11 +16,11 @@ async function bootstrap() {
   // Налаштування глобальних пайпів для валідації
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Видаляє всі властивості, які не мають декораторів валідації
+      // whitelist: true, // Видаляє всі властивості, які не мають декораторів валідації
       transform: true, // Автоматично перетворює примітиви до потрібного типу
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
-
   // Налаштування Swagger документації
   const config = new DocumentBuilder()
     .setTitle('Your API') // Назва API

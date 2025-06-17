@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
 
@@ -9,6 +8,7 @@ import { PrismaService } from '../../infrastructure/db/prisma.service';
 import { RoleService } from '../../infrastructure/db/role.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
 import { MailModule } from '../mail/mail.module';
+import { AuthController } from './auth.controller';
 
 @Module({
   imports: [

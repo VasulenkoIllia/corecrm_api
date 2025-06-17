@@ -109,10 +109,18 @@ export class AuthController {
   @ApiOperation({ summary: 'Create an invitation link for an employee' })
   @ApiOkResponse({ status: 201, description: 'Invitation created', schema: { properties: { message: { type: 'string' }, token: { type: 'string' } } } })
   async createInvite(@Body() inviteDto: InviteDTO, @Req() req: IAuthorizedRequest) {
-    this.logger.log(`Creating invitation by user ${req.user.id}`);
-    const result = await this.authService.createInvite(inviteDto, req.user.id);
-    this.logger.log(`Invitation created by user ${req.user.id}`);
-    return result;
+    this.logger.log(`Starting createInvite for user ID: ${req.user?.id}`);
+    this.logger.log(`Raw request body: ${JSON.stringify(req.body)}`);
+    this.logger.log(`Invite DTO before validation: ${JSON.stringify(inviteDto)}`);
+    this.logger.log(`Authorized user: ${JSON.stringify(req.user)}`);
+    try {
+      const result = await this.authService.createInvite(inviteDto, req.user.id);
+      this.logger.log(`Invitation created by user ${req.user.id}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`Failed to create invitation: ${error.message}, stack: ${error.stack}`);
+      throw error;
+    }
   }
 
   @Public()

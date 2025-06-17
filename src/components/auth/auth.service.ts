@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -183,42 +183,78 @@ export class AuthService {
       email: user.email,
       name: user.name,
       role: user.role?.name ?? 'employee',
-      company: user.companies[0]?.company, // Виправлено доступ до компанії
+      company: user.companies[0]?.company,
     };
   }
 
   async createInvite(dto: InviteDto, directorId: number) {
+    this.logger.log(`Entering createInvite with directorId: ${directorId}`);
+    this.logger.log(`Invite DTO: ${JSON.stringify(dto)}`);
     const { email, companyId } = dto;
-    const director = await this.prisma.client.user.findUnique({
-      where: { id: directorId },
-      include: {
-        role: true,
-        companies: { where: { companyId } },
-      },
-    });
+    this.logger.log(`Creating invitation for email: ${email}, companyId: ${companyId}, type: ${typeof companyId}`);
 
-    if (!director || director.role?.name !== 'director' || !director.companies.length) {
-      this.logger.warn(`User ${directorId} not authorized to create invitation for ${email}`);
-      throw new UnauthorizedException('Only directors can create invitations');
+    if (!Number.isInteger(companyId) || companyId <= 0) {
+      this.logger.warn(`Invalid companyId: ${companyId}`);
+      throw new BadRequestException('companyId must be a positive integer');
     }
 
-    const token = uuidv4();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 3600000);
+    try {
+      this.logger.log(`Checking company existence for ID ${companyId}`);
+      const companyExists = await this.prisma.client.company.findUnique({
+        where: { id: companyId },
+      });
+      if (!companyExists) {
+        this.logger.warn(`Company ${companyId} not found`);
+        throw new NotFoundException('Company not found');
+      }
 
-    const invitation = await this.prisma.client.invitations.create({
-      data: {
-        token,
-        email,
-        companyId,
-        creatorId: directorId,
-        expiresAt,
-      },
-      include: { company: true },
-    });
+      this.logger.log(`Fetching director with ID ${directorId}`);
+      const director = await this.prisma.client.user.findUnique({
+        where: { id: directorId },
+        include: {
+          role: true,
+          companies: { where: { companyId }, include: { company: true } },
+        },
+      });
 
-    await this.mailService.sendInvitationEmail(email, token, invitation.company.name); // Виправлено на company.name
-    this.logger.log(`Invitation created for ${email} by director ${directorId}`);
-    return { message: 'Invitation created', token };
+      this.logger.log(`Director data: ${JSON.stringify(director)}`);
+
+      if (!director) {
+        this.logger.warn(`User ${directorId} not found`);
+        throw new UnauthorizedException('User not found');
+      }
+      if (!director.role || director.role.name !== 'director') {
+        this.logger.warn(`User ${directorId} is not a director`);
+        throw new UnauthorizedException('Only directors can create invitations');
+      }
+      if (!director.companies.length) {
+        this.logger.warn(`User ${directorId} not associated with company ${companyId}`);
+        throw new UnauthorizedException('User not associated with the company');
+      }
+
+      const token = uuidv4();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 3600000);
+
+      this.logger.log(`Creating invitation for ${email}`);
+      const invitation = await this.prisma.client.invitations.create({
+        data: {
+          token,
+          email,
+          companyId,
+          creatorId: directorId,
+          expiresAt,
+        },
+        include: { company: true },
+      });
+
+      this.logger.log(`Invitation created: ${JSON.stringify(invitation)}`);
+      await this.mailService.sendInvitationEmail(email, token, invitation.company?.name || 'Unknown Company');
+      this.logger.log(`Invitation created for ${email} by director ${directorId}`);
+      return { message: 'Invitation created', token };
+    } catch (error) {
+      this.logger.error(`Failed to create invitation: ${error.message}, stack: ${error.stack}`);
+      throw error;
+    }
   }
 
   async validateInvite(token: string) {

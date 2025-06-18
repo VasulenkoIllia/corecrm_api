@@ -9,32 +9,40 @@ export class MailService {
   private transporter;
 
   constructor(private configService: ConfigService<EnvVariables>) {
-    const smtpHost = this.configService.get<string>('SMTP_HOST');
-    const smtpSenderEmail = this.configService.get<string>('SMTP_SENDER_EMAIL');
+    // const smtpHost = this.configService.get<string>('SMTP_HOST');
+    // const smtpSenderEmail = this.configService.get<string>('SMTP_SENDER_EMAIL');
+    //
+    // if (!smtpHost || !smtpSenderEmail) {
+    //   this.logger.error('Missing required SMTP configuration: SMTP_HOST or SMTP_SENDER_EMAIL');
+    //   throw new Error('SMTP configuration is incomplete');
+    // }
 
-    if (!smtpHost || !smtpSenderEmail) {
-      this.logger.error('Missing required SMTP configuration: SMTP_HOST or SMTP_SENDER_EMAIL');
-      throw new Error('SMTP configuration is incomplete');
-    }
+    // this.logger.log(`Initializing MailService with SMTP_SENDER_EMAIL: ${smtpSenderEmail}`);
 
-    this.logger.log(`Initializing MailService with SMTP_SENDER_EMAIL: ${smtpSenderEmail}`);
+  //   this.transporter = nodemailer.createTransport({
+  //     host: smtpHost,
+  //     port: this.configService.get<number>('SMTP_PORT', 465),
+  //     secure: this.configService.get<boolean>('SMTP_USE_SSL', true),
+  //     auth: {
+  //       user: this.configService.get<string>('SMTP_USER_NAME'),
+  //       pass: this.configService.get<string>('SMTP_PASSWORD'),
+  //     },
+  //     tls: {
+  //       minVersion: 'TLSv1.2',
+  //       rejectUnauthorized: false,
+  //     },
+  //     debug: true,
+  //     logger: true,
+  //   });
+  // }
 
-    this.transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: this.configService.get<number>('SMTP_PORT', 465),
-      secure: this.configService.get<boolean>('SMTP_USE_SSL', true),
+     this.transporter = nodemailer.createTransport({
+      service: "gmail",
       auth: {
-        user: this.configService.get<string>('SMTP_USER_NAME'),
-        pass: this.configService.get<string>('SMTP_PASSWORD'),
+        user: "vasulenko.illia@gmail.com",
+        pass: "johr vcca ggkq xdci",
       },
-      tls: {
-        minVersion: 'TLSv1.2',
-        rejectUnauthorized: false,
-      },
-      debug: true,
-      logger: true,
-    });
-  }
+    });}
 
   async sendConfirmationEmail(email: string, token: string) {
     try {

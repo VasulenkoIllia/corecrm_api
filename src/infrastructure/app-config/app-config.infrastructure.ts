@@ -140,12 +140,12 @@ export class AppConfig {
       'SMTP_SENDER_EMAIL',
     ];
 
-    for (const varName of requiredVars) {
-      if (this.configService.get(varName) == null) {
-        this.logger.error(`Missing required environment variable: ${varName}`);
-        throw new Error(`Environment variable ${varName} is not defined`);
-      }
-    }
+    // for (const varName of requiredVars) {
+    //   if (this.configService.get(varName) == null) {
+    //     this.logger.error(`Missing required environment variable: ${varName}`);
+    //     throw new Error(`Environment variable ${varName} is not defined`);
+    //   }
+    // }
   }
 }
 

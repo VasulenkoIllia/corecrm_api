@@ -10,21 +10,21 @@ export class UserService {
   constructor(private prisma: PrismaService) {}
 
   async findByEmailForAuth(email: string) {
-    return this.prisma.client.user.findUnique({
+    return this.prisma.user.findUnique({
       where: { email },
       include: { role: true },
     });
   }
 
   async findById(id: number) {
-    return this.prisma.client.user.findUnique({
+    return this.prisma.user.findUnique({
       where: { id },
       include: { role: true },
     });
   }
 
   async findCompanyUser(userId: number) {
-    const companyUser = await this.prisma.client.companyUsers.findFirst({
+    const companyUser = await this.prisma.companyUsers.findFirst({
       where: { userId },
     });
     if (!companyUser) {
@@ -34,7 +34,7 @@ export class UserService {
   }
 
   async checkUserExists(email: string): Promise<boolean> {
-    const user = await this.prisma.client.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email },
     });
     return !!user;
@@ -47,7 +47,7 @@ export class UserService {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const role = await this.prisma.client.role.findUnique({
+    const role = await this.prisma.role.findUnique({
       where: { name: 'superadmin' },
     });
 
@@ -55,7 +55,7 @@ export class UserService {
       throw new NotFoundException('Role superadmin not found');
     }
 
-    return this.prisma.client.user.create({
+    return this.prisma.user.create({
       data: {
         email,
         password: hashedPassword,
@@ -69,7 +69,7 @@ export class UserService {
   }
 
   async findRoleByName(name: string) {
-    const role = await this.prisma.client.role.findUnique({
+    const role = await this.prisma.role.findUnique({
       where: { name },
     });
 
@@ -81,7 +81,7 @@ export class UserService {
   }
 
   async findCompanyById(id: number) {
-    const company = await this.prisma.client.company.findUnique({
+    const company = await this.prisma.company.findUnique({
       where: { id },
     });
 
@@ -103,7 +103,7 @@ export class UserService {
 
     const role = await this.findRoleByName('director');
 
-    return this.prisma.client.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       const company = await tx.company.create({
         data: {
           name: companyName,
@@ -138,7 +138,7 @@ export class UserService {
       throw new BadRequestException('Email already exists');
     }
 
-    const invitation = await this.prisma.client.invitations.findUnique({
+    const invitation = await this.prisma.invitations.findUnique({
       where: { token: inviteToken },
       include: { company: true },
     });
@@ -160,7 +160,7 @@ export class UserService {
 
     const role = await this.findRoleByName('employee');
 
-    return this.prisma.client.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           email,
@@ -193,7 +193,7 @@ export class UserService {
       throw new BadRequestException('User with this email already exists');
     }
 
-    const existingInvitation = await this.prisma.client.invitations.findFirst({
+    const existingInvitation = await this.prisma.invitations.findFirst({
       where: {
         email,
         companyId,
@@ -208,7 +208,7 @@ export class UserService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    return this.prisma.client.invitations.create({
+    return this.prisma.invitations.create({
       data: {
         token,
         email,
@@ -220,7 +220,7 @@ export class UserService {
   }
 
   async validateInvitation(token: string) {
-    const invitation = await this.prisma.client.invitations.findUnique({
+    const invitation = await this.prisma.invitations.findUnique({
       where: { token },
       include: { company: true },
     });
@@ -237,7 +237,7 @@ export class UserService {
   }
 
   async confirmEmail(token: string) {
-    const user = await this.prisma.client.user.findFirst({
+    const user = await this.prisma.user.findFirst({
       where: { confirmationToken: token },
     });
 
@@ -246,7 +246,7 @@ export class UserService {
       throw new BadRequestException('Invalid or expired token');
     }
 
-    const updatedUser = await this.prisma.client.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id: user.id },
       data: {
         isEmailConfirmed: true,

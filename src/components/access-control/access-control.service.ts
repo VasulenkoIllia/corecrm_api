@@ -12,7 +12,7 @@ export class AccessControlService {
     this.logger.log(`Starting access check for user ${userId}, company ${companyId}, options: ${JSON.stringify(options)}`);
     try {
       this.logger.log(`Fetching company with ID ${companyId}`);
-      const company = await this.prisma.client.company.findUnique({
+      const company = await this.prisma.company.findUnique({
         where: { id: companyId },
         include: { users: { where: { userId } } },
       });
@@ -56,7 +56,7 @@ export class AccessControlService {
       this.logger.log(`Checking required role: ${options.requiredRole}`);
       if (options.requiredRole) {
         this.logger.log(`Fetching user with ID ${userId}`);
-        const user = await this.prisma.client.user.findUnique({
+        const user = await this.prisma.user.findUnique({
           where: { id: userId },
           include: { role: true },
         });

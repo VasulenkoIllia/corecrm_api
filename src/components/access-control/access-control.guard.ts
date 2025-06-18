@@ -1,28 +1,31 @@
-import { BadRequestException, Injectable, PipeTransform } from '@nestjs/common';
+import { BadRequestException, CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { AccessControlService } from './access-control.service';
 import { Reflector } from '@nestjs/core';
 import { ACCESS_CONTROL_METADATA } from '../../common/decorators/access-control-endpoint.decorator';
 
 
 @Injectable()
-export class AccessControlPipe implements PipeTransform {
+export class AccessControlGuard  implements CanActivate {
   constructor(
     private accessControlService: AccessControlService,
     private reflector: Reflector,
   ) {}
 
 
-  async transform(value: any, metadata: any) {
-    const { accessOptions } = this.reflector.get(ACCESS_CONTROL_METADATA, metadata.handler) || { accessOptions: {} };
-    const user = metadata.data?.user;
-
+ async canActivate(
+    context: ExecutionContext,
+  ){
+    const request = context.switchToHttp().getRequest();
+   console.log(request)
+   const { accessOptions } = this.reflector.get(ACCESS_CONTROL_METADATA, context.getHandler()) || { accessOptions: {} };
+    const user = request.user;
     if (!user || !user.id) {
       throw new BadRequestException('User not provided');
     }
 
     // Пропускаємо перевірку компанії для superadmin
     if (user.role === 'superadmin') {
-      return value;
+      return true;
     }
 
     if (!user.companyId) {
@@ -30,7 +33,7 @@ export class AccessControlPipe implements PipeTransform {
     }
 
     await this.accessControlService.checkAccess(user.id, user.companyId, accessOptions);
-
-    return value;
+    console.log(333);
+    return true;
   }
 }

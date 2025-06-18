@@ -18,6 +18,7 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
+
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -28,7 +29,7 @@ export class AuthService {
 
   async registerCompany(dto: RegisterCompanyDto) {
     const { email, password, name, companyName } = dto;
-    const existingUser = await this.prisma.client.user.findUnique({ where: { email } });
+    const existingUser = await this.prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       this.logger.warn(`Registration failed: Email ${email} already exists`);
       throw new BadRequestException('Email already exists');
@@ -36,17 +37,17 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const confirmationToken = uuidv4();
-    const directorRole = await this.prisma.client.role.findUnique({ where: { name: 'director' } });
+    const directorRole = await this.prisma.role.findUnique({ where: { name: 'director' } });
     if (!directorRole) {
       this.logger.error('Director role not found');
       throw new BadRequestException('Director role not found');
     }
 
-    const company = await this.prisma.client.company.create({
+    const company = await this.prisma.company.create({
       data: { name: companyName, modules: { services: true, stock: true } },
     });
 
-    const user = await this.prisma.client.user.create({
+    const user = await this.prisma.user.create({
       data: {
         email,
         password: hashedPassword,
@@ -67,7 +68,7 @@ export class AuthService {
 
   async registerEmployee(dto: RegisterEmployeeDto) {
     const { email, password, name, inviteToken } = dto;
-    const invitation = await this.prisma.client.invitations.findUnique({
+    const invitation = await this.prisma.invitations.findUnique({
       where: { token: inviteToken },
       include: { company: true },
     });
@@ -77,7 +78,7 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired invitation token');
     }
 
-    const existingUser = await this.prisma.client.user.findUnique({ where: { email } });
+    const existingUser = await this.prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       this.logger.warn(`Email ${email} already exists`);
       throw new BadRequestException('Email already exists');
@@ -85,13 +86,13 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const confirmationToken = uuidv4();
-    const employeeRole = await this.prisma.client.role.findUnique({ where: { name: 'employee' } });
+    const employeeRole = await this.prisma.role.findUnique({ where: { name: 'employee' } });
     if (!employeeRole) {
       this.logger.error('Employee role not found');
       throw new BadRequestException('Employee role not found');
     }
 
-    const user = await this.prisma.client.user.create({
+    const user = await this.prisma.user.create({
       data: {
         email,
         password: hashedPassword,
@@ -105,7 +106,7 @@ export class AuthService {
       },
     });
 
-    await this.prisma.client.invitations.delete({ where: { id: invitation.id } });
+    await this.prisma.invitations.delete({ where: { id: invitation.id } });
     await this.mailService.sendConfirmationEmail(email, confirmationToken);
     this.logger.log(`Employee ${email} registered for company ${invitation.companyId}`);
     return { message: 'Employee registered, please confirm your email' };
@@ -168,7 +169,7 @@ export class AuthService {
   }
 
   async getMe(userId: number) {
-    const user = await this.prisma.client.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { role: true, companies: { include: { company: true } } },
     });
@@ -200,7 +201,7 @@ export class AuthService {
 
     try {
       this.logger.log(`Checking company existence for ID ${companyId}`);
-      const companyExists = await this.prisma.client.company.findUnique({
+      const companyExists = await this.prisma.company.findUnique({
         where: { id: companyId },
       });
       if (!companyExists) {
@@ -209,7 +210,7 @@ export class AuthService {
       }
 
       this.logger.log(`Fetching director with ID ${directorId}`);
-      const director = await this.prisma.client.user.findUnique({
+      const director = await this.prisma.user.findUnique({
         where: { id: directorId },
         include: {
           role: true,
@@ -236,7 +237,7 @@ export class AuthService {
       const expiresAt = new Date(Date.now() + 7 * 24 * 3600000);
 
       this.logger.log(`Creating invitation for ${email}`);
-      const invitation = await this.prisma.client.invitations.create({
+      const invitation = await this.prisma.invitations.create({
         data: {
           token,
           email,
@@ -258,7 +259,7 @@ export class AuthService {
   }
 
   async validateInvite(token: string) {
-    const invitation = await this.prisma.client.invitations.findUnique({
+    const invitation = await this.prisma.invitations.findUnique({
       where: { token },
       include: { company: true },
     });

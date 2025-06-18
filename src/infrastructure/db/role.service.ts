@@ -10,7 +10,7 @@ export class RoleService {
 
   async getAllRoles(): Promise<Role[]> {
     try {
-      const roles = await this.prisma.client.role.findMany();
+      const roles = await this.prisma.role.findMany();
       this.logger.log(`Retrieved ${roles.length} roles from the database.`);
       return roles;
     } catch (error) {
@@ -28,12 +28,12 @@ export class RoleService {
       ];
 
       for (const role of defaultRoles) {
-        const existingRole = await this.prisma.client.role.findUnique({
+        const existingRole = await this.prisma.role.findUnique({
           where: { name: role.name },
         });
 
         if (!existingRole) {
-          await this.prisma.client.role.create({
+          await this.prisma.role.create({
             data: {
               name: role.name,
               description: role.description,
@@ -54,7 +54,7 @@ export class RoleService {
 
   async createRole(name: string, description?: string): Promise<Role> {
     try {
-      const role = await this.prisma.client.role.create({
+      const role = await this.prisma.role.create({
         data: {
           name,
           description,
@@ -72,7 +72,7 @@ export class RoleService {
 
   async deleteRole(name: string): Promise<void> {
     try {
-      await this.prisma.client.role.delete({
+      await this.prisma.role.delete({
         where: { name },
       });
       this.logger.log(`Deleted role: ${name}`);

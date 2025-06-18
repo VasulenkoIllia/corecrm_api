@@ -20,9 +20,9 @@ import { RegisterCompanyDTO } from '../../common/dto/auth/register-company.dto';
 import { RegisterEmployeeDTO } from '../../common/dto/auth/register-employee.dto';
 import { AccessControlEndpoint } from '../../common/decorators/access-control-endpoint.decorator';
 import { IAuthorizedRequest } from '../../common/interfaces/common/authorized-request.interface';
-import { InviteDTO } from '../../common/dto/auth/invite.dto';
 import { UserResponseDTO } from '../../common/dto/user/user.response.dto';
 import { ApiResponse } from '../../common/decorators/api-response.decorator';
+import { InviteDTO } from '../../common/dto/auth/invite.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -103,6 +103,8 @@ export class AuthController {
       throw error;
     }
   }
+
+
 
   @AccessControlEndpoint('invite', { requiredRole: 'director' }, RequestMethod.POST)
   @HttpCode(HttpStatus.CREATED)

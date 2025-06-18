@@ -31,7 +31,7 @@ export class DbInfrastructure implements OnModuleInit {
 
     while (retries > 0) {
       try {
-        await this.prisma.client.$connect();
+        await this.prisma.$connect();
         this.logger.log('Database connection established successfully.');
         return;
       } catch (error) {

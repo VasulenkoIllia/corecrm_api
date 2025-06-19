@@ -38,11 +38,13 @@ model Company {
   name               String
   status             String         @default("active")
   subscriptionStatus String         @default("active")
-  modules            Json           @default("{}")
+  modules            Json           @default("{\"clients\": false, \"cars\": false, \"invoices\": false, \"reports\": false}") // Структура: { clients: boolean, cars: boolean, invoices: boolean, reports: boolean }
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   users              CompanyUsers[]
   invitations        Invitations[]
+  clients            Client[]
+  cars               Car[]
 }
 
 model CompanyUsers {
@@ -67,4 +69,34 @@ model Invitations {
   createdAt DateTime @default(now())
   company   Company  @relation(fields: [companyId], references: [id])
   creator   User     @relation(fields: [creatorId], references: [id])
+}
+
+model Client {
+  id        Int      @id @default(autoincrement())
+  firstName String
+  lastName  String
+  phone     String?  @unique
+  email     String?  @unique
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id])
+  cars      Car[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Car {
+  id           Int      @id @default(autoincrement())
+  clientId     Int
+  client       Client   @relation(fields: [clientId], references: [id])
+  companyId    Int
+  company      Company  @relation(fields: [companyId], references: [id])
+  vin          String   @unique
+  make         String
+  model        String
+  year         Int
+  color        String?
+  licensePlate String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

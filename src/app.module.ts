@@ -7,6 +7,11 @@ import { DbInfrastructureModule } from './infrastructure/db/db.infrastructure.mo
 import { MappingInfrastructureModule } from './infrastructure/mapping/mapping.infrastructure.module';
 import { MailModule } from './components/mail/mail.module'; // Модуль для маппінгу об'єктів
 import { InvitationModule } from './components/invitation/invitation.module';
+import { ModulesModule } from './components/modules/modules.module';
+import { ClientsModule } from './components/clients/clients.module';
+
+import { CarsModule } from './components/cars/cars.module';
+
 
 /**
  * Головний модуль додатку
@@ -20,15 +25,16 @@ import { InvitationModule } from './components/invitation/invitation.module';
     UserModule, // Імпорт модуля для роботи з користувачами
     AuthModule, // Імпорт модуля для автентифікації
     MailModule,
-
-    InvitationModule
+    InvitationModule,
+    ModulesModule,
+    ClientsModule,
+    CarsModule,
   ],
+  // controllers: [ModulesController, ClientsController, CarsController],
+  // providers: [ClientsService, CarsService],
 })
 
-/**
- * Клас головного модуля додатку
- * Служить точкою входу для NestJS фреймворку
- */
+
 export class AppModule {
-  // Клас порожній, оскільки вся конфігурація відбувається через декоратор @Module
+
 }

@@ -1,10 +1,11 @@
 import { Controller, Logger, NotFoundException, Req, RequestMethod } from '@nestjs/common';
-import { SecureEndpoint } from '../../common/decorators/secure-endpoint.decorator';
-import { IAuthorizedRequest } from '../../common/interfaces/common/authorized-request.interface';
-import { UserService } from './user.service';
-import { UserResponseDTO } from '../../common/dto/user/user.response.dto';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { UserService } from './user.service';
+import { SecureEndpoint } from '../../common/decorators/secure-endpoint.decorator';
+import { UserResponseDTO } from '../../common/dto/user/user.response.dto';
 import { CatchError } from '../../common/decorators/catch-error.decorator';
+import { IAuthorizedRequest } from '../../common/interfaces/common/authorized-request.interface';
+
 
 /**
  * Контролер для роботи з користувачами

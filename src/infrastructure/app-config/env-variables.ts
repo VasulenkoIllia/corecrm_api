@@ -32,6 +32,7 @@ export interface EnvVariables {
   TELEGRAM_API_TOKEN?: string;
   SWAGGER_TITLE?: string;
   SWAGGER_DESCRIPTION?: string;
+  ELASTICSEARCH_URL?: string;
 }
 
 // Схема валідації змінних середовища за допомогою Joi
@@ -66,4 +67,5 @@ export const envValidationSchema = Joi.object<EnvVariables>({
   TELEGRAM_API_TOKEN: Joi.string().optional(),
   SWAGGER_TITLE: Joi.string().optional(),
   SWAGGER_DESCRIPTION: Joi.string().optional(),
+  ELASTICSEARCH_URL: Joi.string().uri().optional().default('http://localhost:9200'),
 }).unknown(true);

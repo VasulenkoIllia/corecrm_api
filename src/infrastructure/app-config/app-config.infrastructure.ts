@@ -132,6 +132,10 @@ export class AppConfig {
     return this.configService.get<string>('SWAGGER_DESCRIPTION');
   }
 
+  public get ELASTICSEARCH_URL(): string | undefined {
+    return this.configService.get<string>('ELASTICSEARCH_URL', 'http://localhost:9200');
+  }
+
   private validateRequiredEnvVariables(): void {
     const requiredVars: (keyof EnvVariables)[] = [
       'DB_HOST',
@@ -145,6 +149,7 @@ export class AppConfig {
       'BCRYPT_SALT_ROUNDS',
       'ADMIN_EMAIL',
       'ADMIN_PASSWORD',
+      'ELASTICSEARCH_URL',
     ];
 
     for (const varName of requiredVars) {

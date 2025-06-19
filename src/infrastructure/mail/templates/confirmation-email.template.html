@@ -1,0 +1,86 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm Your Email</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+    .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .header { background-color: #007bff; padding: 20px; text-align: center; }
+    .header img { max-width: 150px; height: auto; }
+    .header h1 { color: #ffffff; margin: 10px 0; font-size: 24px; }
+    .content { padding: 30px; text-align: center; }
+    .content h2 { color: #333333; font-size: 20px; margin-bottom: 20px; }
+    .content p { color: #666666; font-size: 16px; line-height: 1.5; margin-bottom: 20px; }
+    .cta-button { display: inline-block; padding: 12px 24px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; }
+    .cta-button:hover { background-color: #0056b3; }
+    .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666666; }
+    .footer a { color: #007bff; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .container { margin: 10px; }
+      .header h1 { font-size: 20px; }
+      .content h2 { font-size: 18px; }
+      .content p { font-size: 14px; }
+      .cta-button { padding: 10px 20px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="https://via.placeholder.com/150x50?text=Your+Logo" alt="Company Logo">
+      <h1>Welcome to {{projectName}}!</h1>
+    </div>
+    <div class="content">
+      <h2>Confirm Your Email Address</h2>
+      <p>Thank you for signing up! To get started, please confirm your email address by clicking the button below.</p>
+      <a href="{{confirmationUrl}}" class="cta-button">Confirm Email</a>
+      <p>If the button doesn't work, copy and paste this link into your browser: <br><a href="{{confirmationUrl}}">{{confirmationUrl}}</a></p>
+    </div>
+    <div class="footer">
+      <p>© 2025 {{projectName}}. All rights reserved.</p>
+      <p><a href="mailto:support@example.com">Contact Support</a> | <a href="#">Unsubscribe</a></p>
+    </div>
+  </div>
+</body>
+</html>

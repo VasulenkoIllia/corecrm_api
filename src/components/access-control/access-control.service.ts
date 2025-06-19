@@ -2,12 +2,27 @@ import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nest
 import { PrismaService } from '../../infrastructure/db/prisma.service';
 import { AccessOptions } from '../../common/interfaces/user/access-options.interface';
 
+/**
+ * Сервіс, відповідальний за перевірку дозволів доступу на основі користувача, компанії та конкретних параметрів.
+ * Обробляє перевірки статусу компанії, статусу підписки, доступу до модулів та ролей користувачів.
+ * Забезпечує детальне логування рішень контролю доступу.
+ */
 @Injectable()
 export class AccessControlService {
   private readonly logger = new Logger(AccessControlService.name);
 
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Перевіряє, чи має користувач доступ до компанії на основі різних умов.
+   * Перевіряє існування компанії, зв'язок користувача з компанією, статус компанії,
+   * статус підписки, доступ до модулів та роль користувача, якщо потрібно.
+   * 
+   * @param userId Ідентифікатор користувача, який запитує доступ
+   * @param companyId Ідентифікатор компанії, до якої здійснюється доступ
+   * @param options Параметри доступу, що містять вимоги до модуля та ролі
+   * @returns True, якщо доступ надано, інакше викидає виняток
+   */
   async checkAccess(userId: number, companyId: number, options: AccessOptions) {
     this.logger.log(`Starting access check for user ${userId}, company ${companyId}, options: ${JSON.stringify(options)}`);
     try {

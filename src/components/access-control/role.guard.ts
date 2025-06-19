@@ -3,7 +3,11 @@ import { PrismaService } from '../../infrastructure/db/prisma.service';
 import { Reflector } from '@nestjs/core';
 import { ACCESS_CONTROL_METADATA } from '../../common/decorators/access-control-endpoint.decorator';
 
-
+/**
+ * Гард, який забезпечує контроль доступу на основі ролей для захищених ендпоінтів.
+ * Перевіряє, що користувач, який робить запит, має необхідну роль для доступу до ендпоінту.
+ * Працює з декоратором access-control-endpoint для отримання вимог до ролей.
+ */
 @Injectable()
 export class RoleGuard implements CanActivate {
   constructor(
@@ -11,6 +15,13 @@ export class RoleGuard implements CanActivate {
     private reflector: Reflector,
   ) {}
 
+  /**
+   * Визначає, чи має поточний користувач необхідну роль для доступу до ендпоінту.
+   * Витягує необхідну роль з метаданих маршруту та перевіряє її відповідність призначеній ролі користувача.
+   * 
+   * @param context Контекст виконання, що містить запит
+   * @returns True, якщо користувач має необхідну роль, інакше викидає ForbiddenException
+   */
   async canActivate(
     context: ExecutionContext,
   ){

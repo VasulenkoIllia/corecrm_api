@@ -23,6 +23,8 @@ export interface EnvVariables {
   SMTP_USER_NAME?: string;
   SMTP_PASSWORD?: string;
   SMTP_SENDER_EMAIL?: string;
+  SMTP_GMAIL_USER?: string;
+  SMTP_GMAIL_PASS?: string;
   LOGGER_LEVEL_SECURITY?: string;
   LOGGER_HIDE_VALUES?: string;
   LOGGER_LEVEL?: string;
@@ -55,6 +57,8 @@ export const envValidationSchema = Joi.object<EnvVariables>({
   SMTP_USER_NAME: Joi.string().optional(),
   SMTP_PASSWORD: Joi.string().optional(),
   SMTP_SENDER_EMAIL: Joi.string().email().optional(),
+  SMTP_GMAIL_USER: Joi.string().email().optional(),
+  SMTP_GMAIL_PASS: Joi.string().optional(),
   LOGGER_LEVEL_SECURITY: Joi.string().optional(),
   LOGGER_HIDE_VALUES: Joi.string().optional(),
   LOGGER_LEVEL: Joi.string().optional(),

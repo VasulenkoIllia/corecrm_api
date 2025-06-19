@@ -10,8 +10,10 @@ export class AppConfig {
     this.validateRequiredEnvVariables();
   }
 
-  public get BASE_SITE_URL(): string | undefined {
-    return this.configService.get<string>('BASE_SITE_URL');
+  public get BASE_SITE_URL(): string {
+    const baseSiteUrl = this.configService.get<string>('BASE_SITE_URL');
+    const port = this.configService.get<number>('PORT', 4000);
+    return baseSiteUrl || `http://localhost:${port}`;
   }
 
   public get DB_HOST(): string {
@@ -94,6 +96,14 @@ export class AppConfig {
     return this.configService.get<string>('SMTP_SENDER_EMAIL');
   }
 
+  public get SMTP_GMAIL_USER(): string | undefined {
+    return this.configService.get<string>('SMTP_GMAIL_USER');
+  }
+
+  public get SMTP_GMAIL_PASS(): string | undefined {
+    return this.configService.get<string>('SMTP_GMAIL_PASS');
+  }
+
   public get LOGGER_LEVEL_SECURITY(): string | undefined {
     return this.configService.get<string>('LOGGER_LEVEL_SECURITY');
   }
@@ -135,17 +145,14 @@ export class AppConfig {
       'BCRYPT_SALT_ROUNDS',
       'ADMIN_EMAIL',
       'ADMIN_PASSWORD',
-      'SMTP_HOST', // Додаємо SMTP-зміни
-      'SMTP_PORT',
-      'SMTP_SENDER_EMAIL',
     ];
 
-    // for (const varName of requiredVars) {
-    //   if (this.configService.get(varName) == null) {
-    //     this.logger.error(`Missing required environment variable: ${varName}`);
-    //     throw new Error(`Environment variable ${varName} is not defined`);
-    //   }
-    // }
+    for (const varName of requiredVars) {
+      if (this.configService.get(varName) == null) {
+        this.logger.error(`Missing required environment variable: ${varName}`);
+        throw new Error(`Environment variable ${varName} is not defined`);
+      }
+    }
   }
 }
 

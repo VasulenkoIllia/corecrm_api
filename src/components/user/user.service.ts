@@ -2,12 +2,58 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { PrismaService } from '../../infrastructure/db/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
 
   constructor(private prisma: PrismaService) {}
+
+  async createUser(
+    data: {
+      email: string;
+      password: string;
+      name: string;
+      roleName: string;
+      companyId?: number;
+      confirmationToken?: string;
+      isEmailConfirmed?: boolean;
+    },
+    prismaClient: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const { email, password, name, roleName, confirmationToken, isEmailConfirmed = false } = data;
+
+    if (await this.checkUserExists(email, prismaClient)) {
+      this.logger.warn(`User with email ${email} already exists`);
+      throw new BadRequestException('Email already exists');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const role = await this.findRoleByName(roleName, prismaClient);
+
+    const user = await prismaClient.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name,
+        roleId: role.id,
+        confirmationToken: confirmationToken || uuidv4(),
+        isEmailConfirmed,
+      },
+    });
+
+    if (data.companyId) {
+      await prismaClient.companyUsers.create({
+        data: {
+          userId: user.id,
+          companyId: data.companyId,
+        },
+      });
+    }
+
+    return user;
+  }
 
   async findByEmailForAuth(email: string) {
     return this.prisma.user.findUnique({
@@ -19,7 +65,7 @@ export class UserService {
   async findById(id: number) {
     return this.prisma.user.findUnique({
       where: { id },
-      include: { role: true },
+      include: { role: true, companies: { include: { company: true } } },
     });
   }
 
@@ -33,43 +79,25 @@ export class UserService {
     return companyUser;
   }
 
-  async checkUserExists(email: string): Promise<boolean> {
-    const user = await this.prisma.user.findUnique({
+  async checkUserExists(email: string, prismaClient: Prisma.TransactionClient | PrismaService = this.prisma): Promise<boolean> {
+    const user = await prismaClient.user.findUnique({
       where: { email },
     });
     return !!user;
   }
 
   async createAdminUser(email: string, password: string) {
-    const userExists = await this.checkUserExists(email);
-    if (userExists) {
-      return; // Користувач уже існує, пропускаємо створення
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const role = await this.prisma.role.findUnique({
-      where: { name: 'superadmin' },
-    });
-
-    if (!role) {
-      throw new NotFoundException('Role superadmin not found');
-    }
-
-    return this.prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name: 'Admin',
-        roleId: role.id,
-        isEmailConfirmed: true, // Встановлюємо підтверджений email
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+    return this.createUser({
+      email,
+      password,
+      name: 'Admin',
+      roleName: 'superadmin',
+      isEmailConfirmed: true,
     });
   }
 
-  async findRoleByName(name: string) {
-    const role = await this.prisma.role.findUnique({
+  async findRoleByName(name: string, prismaClient: Prisma.TransactionClient | PrismaService = this.prisma) {
+    const role = await prismaClient.role.findUnique({
       where: { name },
     });
 
@@ -93,111 +121,59 @@ export class UserService {
   }
 
   async createCompanyWithDirector(email: string, password: string, name: string, companyName: string) {
-    const userExists = await this.checkUserExists(email);
-    if (userExists) {
-      throw new BadRequestException('Email already exists');
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const confirmationToken = uuidv4();
-
-    const role = await this.findRoleByName('director');
-
     return this.prisma.$transaction(async (tx) => {
       const company = await tx.company.create({
-        data: {
-          name: companyName,
-        },
+        data: { name: companyName, modules: { services: true, stock: true } },
       });
 
-      const user = await tx.user.create({
-        data: {
+      const user = await this.createUser(
+        {
           email,
-          password: hashedPassword,
+          password,
           name,
-          roleId: role.id,
-          isEmailConfirmed: false,
-          confirmationToken,
-        },
-      });
-
-      await tx.companyUsers.create({
-        data: {
-          userId: user.id,
+          roleName: 'director',
           companyId: company.id,
+          confirmationToken: uuidv4(),
         },
-      });
+        tx,
+      );
 
-      return { user, company, confirmationToken };
+      return { user, company, confirmationToken: user.confirmationToken };
     });
   }
 
   async createEmployee(email: string, password: string, name: string, inviteToken: string) {
-    const userExists = await this.checkUserExists(email);
-    if (userExists) {
-      throw new BadRequestException('Email already exists');
-    }
-
-    const invitation = await this.prisma.invitations.findUnique({
-      where: { token: inviteToken },
-      include: { company: true },
-    });
-
-    if (!invitation) {
-      throw new BadRequestException('Invalid invitation token');
-    }
-
-    if (invitation.expiresAt < new Date()) {
-      throw new BadRequestException('Invitation token has expired');
-    }
+    const invitation = await this.validateInviteToken(inviteToken);
 
     if (invitation.email !== email) {
       throw new BadRequestException('Email does not match invitation');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const confirmationToken = uuidv4();
-
-    const role = await this.findRoleByName('employee');
-
     return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
+      const user = await this.createUser(
+        {
           email,
-          password: hashedPassword,
+          password,
           name,
-          roleId: role.id,
-          isEmailConfirmed: false,
-          confirmationToken,
-        },
-      });
-
-      await tx.companyUsers.create({
-        data: {
-          userId: user.id,
+          roleName: 'employee',
           companyId: invitation.companyId,
         },
-      });
+        tx,
+      );
 
-      await tx.invitations.delete({
-        where: { id: invitation.id },
-      });
+      await tx.invitations.delete({ where: { id: invitation.id } });
 
-      return { user, company: invitation.company, confirmationToken };
+      return { user, company: invitation.company, confirmationToken: user.confirmationToken };
     });
   }
 
   async createInvitation(email: string, companyId: number, creatorId: number) {
-    const userExists = await this.checkUserExists(email);
-    if (userExists) {
+    if (await this.checkUserExists(email)) {
       throw new BadRequestException('User with this email already exists');
     }
 
     const existingInvitation = await this.prisma.invitations.findFirst({
-      where: {
-        email,
-        companyId,
-      },
+      where: { email, companyId },
     });
 
     if (existingInvitation) {
@@ -205,8 +181,7 @@ export class UserService {
     }
 
     const token = uuidv4();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 3600000);
 
     return this.prisma.invitations.create({
       data: {
@@ -219,18 +194,14 @@ export class UserService {
     });
   }
 
-  async validateInvitation(token: string) {
+  async validateInviteToken(token: string) {
     const invitation = await this.prisma.invitations.findUnique({
       where: { token },
       include: { company: true },
     });
 
-    if (!invitation) {
-      throw new BadRequestException('Invalid invitation token');
-    }
-
-    if (invitation.expiresAt < new Date()) {
-      throw new BadRequestException('Invitation token has expired');
+    if (!invitation || invitation.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired invitation token');
     }
 
     return invitation;

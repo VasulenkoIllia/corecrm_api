@@ -6,6 +6,7 @@ import { AppConfigInfrastructureModule } from './infrastructure/app-config/app-c
 import { DbInfrastructureModule } from './infrastructure/db/db.infrastructure.module'; // Модуль для роботи з базою даних
 import { MappingInfrastructureModule } from './infrastructure/mapping/mapping.infrastructure.module';
 import { MailModule } from './components/mail/mail.module'; // Модуль для маппінгу об'єктів
+import { InvitationModule } from './components/invitation/invitation.module';
 
 /**
  * Головний модуль додатку
@@ -18,9 +19,12 @@ import { MailModule } from './components/mail/mail.module'; // Модуль дл
     MappingInfrastructureModule.registerProfilesAsync(), // Імпорт та реєстрація профілів маппінгу
     UserModule, // Імпорт модуля для роботи з користувачами
     AuthModule, // Імпорт модуля для автентифікації
-    MailModule
+    MailModule,
+
+    InvitationModule
   ],
 })
+
 /**
  * Клас головного модуля додатку
  * Служить точкою входу для NestJS фреймворку

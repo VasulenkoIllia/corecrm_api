@@ -18,7 +18,6 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -29,38 +28,7 @@ export class AuthService {
 
   async registerCompany(dto: RegisterCompanyDto) {
     const { email, password, name, companyName } = dto;
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      this.logger.warn(`Registration failed: Email ${email} already exists`);
-      throw new BadRequestException('Email already exists');
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const confirmationToken = uuidv4();
-    const directorRole = await this.prisma.role.findUnique({ where: { name: 'director' } });
-    if (!directorRole) {
-      this.logger.error('Director role not found');
-      throw new BadRequestException('Director role not found');
-    }
-
-    const company = await this.prisma.company.create({
-      data: { name: companyName, modules: { services: true, stock: true } },
-    });
-
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        roleId: directorRole.id,
-        confirmationToken,
-        isEmailConfirmed: false,
-        companies: {
-          create: { companyId: company.id },
-        },
-      },
-    });
-
+    const { user, company, confirmationToken } = await this.userService.createCompanyWithDirector(email, password, name, companyName);
     await this.mailService.sendConfirmationEmail(email, confirmationToken);
     this.logger.log(`Company ${companyName} and director ${email} created`);
     return { message: 'Company registered, please confirm your email' };
@@ -68,47 +36,9 @@ export class AuthService {
 
   async registerEmployee(dto: RegisterEmployeeDto) {
     const { email, password, name, inviteToken } = dto;
-    const invitation = await this.prisma.invitations.findUnique({
-      where: { token: inviteToken },
-      include: { company: true },
-    });
-
-    if (!invitation || invitation.expiresAt < new Date()) {
-      this.logger.warn(`Invalid invitation token for ${email}`);
-      throw new BadRequestException('Invalid or expired invitation token');
-    }
-
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      this.logger.warn(`Email ${email} already exists`);
-      throw new BadRequestException('Email already exists');
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const confirmationToken = uuidv4();
-    const employeeRole = await this.prisma.role.findUnique({ where: { name: 'employee' } });
-    if (!employeeRole) {
-      this.logger.error('Employee role not found');
-      throw new BadRequestException('Employee role not found');
-    }
-
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        roleId: employeeRole.id,
-        confirmationToken,
-        isEmailConfirmed: false,
-        companies: {
-          create: { companyId: invitation.companyId },
-        },
-      },
-    });
-
-    await this.prisma.invitations.delete({ where: { id: invitation.id } });
+    const { user, company, confirmationToken } = await this.userService.createEmployee(email, password, name, inviteToken);
     await this.mailService.sendConfirmationEmail(email, confirmationToken);
-    this.logger.log(`Employee ${email} registered for company ${invitation.companyId}`);
+    this.logger.log(`Employee ${email} registered for company ${company.id}`);
     return { message: 'Employee registered, please confirm your email' };
   }
 
@@ -169,11 +99,7 @@ export class AuthService {
   }
 
   async getMe(userId: number) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { role: true, companies: { include: { company: true } } },
-    });
-
+    const user = await this.userService.findById(userId);
     if (!user) {
       this.logger.warn(`User with ID ${userId} not found`);
       throw new UnauthorizedException('User not found');
@@ -233,25 +159,10 @@ export class AuthService {
         throw new UnauthorizedException('User not associated with the company');
       }
 
-      const token = uuidv4();
-      const expiresAt = new Date(Date.now() + 7 * 24 * 3600000);
-
-      this.logger.log(`Creating invitation for ${email}`);
-      const invitation = await this.prisma.invitations.create({
-        data: {
-          token,
-          email,
-          companyId,
-          creatorId: directorId,
-          expiresAt,
-        },
-        include: { company: true },
-      });
-
-      this.logger.log(`Invitation created: ${JSON.stringify(invitation)}`);
-      await this.mailService.sendInvitationEmail(email, token, invitation.company?.name || 'Unknown Company');
+      const invitation = await this.userService.createInvitation(email, companyId, directorId);
+      await this.mailService.sendInvitationEmail(email, invitation.token, companyExists.name);
       this.logger.log(`Invitation created for ${email} by director ${directorId}`);
-      return { message: 'Invitation created', token };
+      return { message: 'Invitation created', token: invitation.token };
     } catch (error) {
       this.logger.error(`Failed to create invitation: ${error.message}, stack: ${error.stack}`);
       throw error;
@@ -259,16 +170,7 @@ export class AuthService {
   }
 
   async validateInvite(token: string) {
-    const invitation = await this.prisma.invitations.findUnique({
-      where: { token },
-      include: { company: true },
-    });
-
-    if (!invitation || invitation.expiresAt < new Date()) {
-      this.logger.warn(`Invalid or expired invitation token: ${token}`);
-      throw new BadRequestException('Invalid or expired invitation token');
-    }
-
+    const invitation = await this.userService.validateInviteToken(token);
     this.logger.log(`Invitation token ${token} validated successfully`);
     return { email: invitation.email, company: invitation.company };
   }
@@ -288,14 +190,14 @@ export class AuthService {
       const session = await this.redisService.get(`session:${payload.id}`);
       if (!session || session !== token) {
         this.logger.warn(`Invalid session token for user ${payload.email}`);
-        return null;
+        throw new UnauthorizedException('Invalid session');
       }
 
-      this.logger.log(`Token validated successfully for user ${payload.email}`);
+      this.logger.log(`Token validated successfully for user: ${payload.email}`);
       return payload;
     } catch (error) {
       this.logger.warn(`Token validation failed: ${error.message}`);
-      return null;
+      throw error;
     }
   }
 
@@ -352,7 +254,7 @@ export class AuthService {
       await this.redisService.set(`session:${user.id}`, accessToken, 3600);
       await this.redisService.set(`refresh:${user.id}`, newRefreshToken, 7 * 24 * 3600);
 
-      this.logger.log(`Token refreshed successfully for user ${user.email}`);
+      this.logger.log(`Token refreshed successfully for user: ${user.email}`);
       return { accessToken, refreshToken: newRefreshToken };
     } catch (error) {
       this.logger.error(`Refresh token failed: ${error.message}`);
@@ -363,4 +265,55 @@ export class AuthService {
   async confirmEmail(token: string) {
     return this.userService.confirmEmail(token);
   }
+
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    this.logger.log(`Initiating password reset for email: ${email}`);
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      this.logger.warn(`User with email ${email} not found`);
+      throw new NotFoundException('User not found');
+    }
+
+    const resetToken = uuidv4();
+    const resetTokenExpires = new Date(Date.now() + 3600 * 1000); // 1 hour
+
+    await this.prisma.user.update({
+      where: { email },
+      data: { resetToken, resetTokenExpires },
+    });
+
+    await this.mailService.sendPasswordResetEmail(email, resetToken);
+    this.logger.log(`Password reset email sent to ${email}`);
+    return { message: 'Password reset email sent successfully' };
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    this.logger.log(`Attempting password reset with token: ${token}`);
+    const user = await this.prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      this.logger.warn(`Invalid or expired reset token: ${token}`);
+      throw new BadRequestException('Invalid or expired token');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpires: null,
+      },
+    });
+
+    this.logger.log(`Password reset successfully for user ID: ${user.id}`);
+    return { message: 'Password reset successfully' };
+  }
+
+
 }

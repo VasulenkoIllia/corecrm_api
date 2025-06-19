@@ -18,6 +18,11 @@ interface IAuthorizedRequest extends Request {
   user: IJwtPayload;
 }
 
+/**
+ * Гард для перевірки JWT токенів та захисту ендпоінтів.
+ * Перевіряє наявність та валідність JWT токена в заголовку запиту.
+ * Підтримує публічні ендпоінти та ендпоінти, доступні тільки для адміністраторів.
+ */
 @Injectable()
 export class JwtGuard implements CanActivate {
   private readonly logger = new Logger(JwtGuard.name);
@@ -28,6 +33,15 @@ export class JwtGuard implements CanActivate {
     private readonly appConfig: AppConfig,
   ) {}
 
+  /**
+   * Перевіряє, чи має запит дійсний JWT токен для доступу до захищеного ресурсу.
+   * Пропускає перевірку для публічних ендпоінтів.
+   * Перевіряє структуру та валідність JWT токена.
+   * Перевіряє права доступу для адміністративних ендпоінтів.
+   * 
+   * @param context Контекст виконання, що містить запит
+   * @returns True, якщо доступ надано, інакше викидає виняток
+   */
   async canActivate(context: ExecutionContext): Promise<boolean> {
     console.log(111)
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -77,6 +91,13 @@ export class JwtGuard implements CanActivate {
     }
   }
 
+  /**
+   * Витягує JWT токен із заголовка Authorization запиту.
+   * Очікує токен у форматі "Bearer [token]".
+   * 
+   * @param request Об'єкт запиту Express
+   * @returns Токен, якщо він присутній та має правильний формат, інакше undefined
+   */
   private extractTokenFromHeader(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;

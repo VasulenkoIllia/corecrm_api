@@ -8,16 +8,7 @@ export class RoleService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async getAllRoles(): Promise<Role[]> {
-    try {
-      const roles = await this.prisma.role.findMany();
-      this.logger.log(`Retrieved ${roles.length} roles from the database.`);
-      return roles;
-    } catch (error) {
-      this.logger.error(`Failed to retrieve roles: ${error.message}`);
-      throw error;
-    }
-  }
+
 
   async createInitialRoles(): Promise<void> {
     try {
@@ -48,6 +39,17 @@ export class RoleService {
       }
     } catch (error) {
       this.logger.error(`Failed to create initial roles: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async getAllRoles(): Promise<Role[]> {
+    try {
+      const roles = await this.prisma.role.findMany();
+      this.logger.log(`Retrieved ${roles.length} roles from the database.`);
+      return roles;
+    } catch (error) {
+      this.logger.error(`Failed to retrieve roles: ${error.message}`);
       throw error;
     }
   }

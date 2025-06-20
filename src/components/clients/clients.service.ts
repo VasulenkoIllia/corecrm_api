@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { PrismaService } from '../../infrastructure/db/prisma.service';
-import { ElasticsearchIndexingService } from '../../infrastructure/db/elasticsearch-indexing.service';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { ElasticsearchIndexingService } from '../../infrastructure/elastic/elasticsearch-indexing.service';
 import { AccessControlService } from '../access-control/access-control.service';
 import { CreateClientDto } from '../../common/dto/client/create-client.dto';
 import { SearchClientDto } from '../../common/dto/client/search-client.dto';

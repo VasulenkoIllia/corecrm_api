@@ -1,8 +1,8 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { PrismaService } from './prisma.service';
-import { RoleService } from './role.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { RoleService } from '../prisma/role.service';
 import { envValidationSchema, EnvVariables } from '../app-config/env-variables';
 import { appConfigProvider } from '../app-config/app-config.infrastructure';
 import { UserService } from '../../components/user/user.service';

@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from '../db/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { ElasticsearchIndexingService } from './elasticsearch-indexing.service';
 import * as fs from 'fs';
 import * as path from 'path';

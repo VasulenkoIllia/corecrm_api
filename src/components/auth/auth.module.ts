@@ -4,8 +4,8 @@ import { UserService } from '../user/user.service';
 
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { PrismaService } from '../../infrastructure/db/prisma.service';
-import { RoleService } from '../../infrastructure/db/role.service';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { RoleService } from '../../infrastructure/prisma/role.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
 import { MailModule } from '../mail/mail.module';
 import { AuthController } from './auth.controller';

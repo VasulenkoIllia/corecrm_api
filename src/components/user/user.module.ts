@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { ConfigModule } from '@nestjs/config';
-import { PrismaService } from '../../infrastructure/db/prisma.service';
-import { RoleService } from '../../infrastructure/db/role.service';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { RoleService } from '../../infrastructure/prisma/role.service';
 
 // Модуль для роботи з користувачами
 @Module({

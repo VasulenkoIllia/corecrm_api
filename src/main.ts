@@ -1,43 +1,123 @@
-// Імпорт необхідних модулів та залежностей
-import 'reflect-metadata'; // Необхідно для роботи декораторів
-import { NestFactory } from '@nestjs/core'; // Фабрика для створення NestJS додатку
-import { AppModule } from './app.module'; // Головний модуль додатку
-import { ValidationPipe } from '@nestjs/common'; // Пайп для валідації вхідних даних
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'; // Модулі для генерації Swagger документації
+import 'reflect-metadata';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { HttpException, HttpStatus, Logger, ValidationPipe } from '@nestjs/common';
+import { WinstonModule } from 'nest-winston';
+import * as winston from 'winston';
+import helmet from 'helmet';
+import compression from 'compression';
+import { NextFunction, Request, Response } from 'express';
+import { AppConfig } from './infrastructure/app-config/app-config.infrastructure';
+import { HttpExceptionFilter } from './common/exceptions/http-exception.filter';
+import { SwaggerInfrastructure } from './infrastructure/swagger/swagger.infrastructure';
 
-/**
- * Функція ініціалізації додатку
- * Відповідає за створення та налаштування NestJS додатку
- */
-async function bootstrap() {
-  // Створення екземпляру NestJS додатку
-  const app = await NestFactory.create(AppModule);
+// Глобальний обробник помилок
+function globalErrorHandler(err: any, req: Request, res: Response, next: NextFunction) {
+  const logger = new Logger('GlobalErrorHandler');
+  const status = err instanceof HttpException ? err.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+  const message = err.message || 'Internal server error';
 
-  // Налаштування глобальних пайпів для валідації
-  app.useGlobalPipes(
-    new ValidationPipe({
-      // whitelist: true, // Видаляє всі властивості, які не мають декораторів валідації
-      transform: true, // Автоматично перетворює примітиви до потрібного типу
-      transformOptions: { enableImplicitConversion: true },
-    }),
-  );
-  // Налаштування Swagger документації
-  const config = new DocumentBuilder()
-    .setTitle('Your API') // Назва API
-    .setDescription('API description') // Опис API
-    .setVersion('1.0') // Версія API
-    .addBearerAuth() // Додавання підтримки Bearer автентифікації
-    .build();
+  logger.error(`[${req.method}] ${req.url} - ${status} - ${message}`, err.stack);
 
-  // Створення документації
-  const document = SwaggerModule.createDocument(app, config);
-
-  // Налаштування ендпоінту для доступу до Swagger документації
-  SwaggerModule.setup('api', app, document);
-
-  // Запуск сервера на порту 3000
-  await app.listen(3000);
+  res.status(status).json({
+    statusCode: status,
+    message,
+    timestamp: new Date().toISOString(),
+    path: req.url,
+  });
 }
 
-// Виклик функції ініціалізації
-bootstrap();
+// Логування запитів
+function requestLogger(logger: Logger) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      logger.log(`[${req.method}] ${req.url} - ${res.statusCode} - ${duration}ms`);
+    });
+    next();
+  };
+}
+
+async function bootstrap() {
+  const logger = new Logger('Bootstrap');
+
+  // Налаштування Winston
+  const winstonLogger = WinstonModule.createLogger({
+    level: process.env.LOGGER_LEVEL || 'info',
+    transports: [
+      new winston.transports.Console({
+        format: winston.format.combine(
+          winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+          winston.format.errors({ stack: true }),
+          process.env.NODE_ENV === 'development'
+            ? winston.format.combine(
+              winston.format.colorize(),
+              winston.format.printf(({ level, message, context, timestamp, stack, ...meta }) => {
+                const metaString = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : '';
+                return stack
+                  ? `${timestamp} [${context || 'App'}] ${level}: ${message}\n${stack}${metaString}`
+                  : `${timestamp} [${context || 'App'}] ${level}: ${message}${metaString}`;
+              }),
+            )
+            : winston.format.json(),
+        ),
+      }),
+    ],
+  });
+
+  // Створення додатку
+  // const app = await NestFactory.create(AppModule, {
+  //   logger: winstonLogger,
+  // });
+
+  const app = await NestFactory.create(AppModule);
+
+  // Отримання конфігурації та сервісів
+  const appConfig = app.get(AppConfig);
+  const httpExceptionFilter = app.get(HttpExceptionFilter);
+
+  // Налаштування безпеки
+  app.use(helmet());
+  app.use(compression());
+  app.enableCors({
+    origin: appConfig.CORS_ORIGINS.split(','),
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    credentials: true,
+  });
+
+  // Глобальні пайпи для валідації
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+      forbidNonWhitelisted: true,
+      whitelist: true,
+    }),
+  );
+
+  // Глобальний обробник помилок
+  app.useGlobalFilters(httpExceptionFilter);
+  app.use(globalErrorHandler);
+
+  // Логування запитів
+  app.use(requestLogger(new Logger('Request')));
+
+  // API версіонування
+  app.setGlobalPrefix('api');
+
+  // Ініціалізація Swagger
+  const swagger = app.get(SwaggerInfrastructure);
+  swagger.initialize(app);
+
+  // Запуск сервера
+  const port = appConfig.PORT;
+  await app.listen(port);
+  logger.log(`Application is running on: ${appConfig.BASE_SITE_URL}:${port}`);
+  logger.log(`Swagger is running on: ${appConfig.BASE_SITE_URL}:${port}/api/docs`);
+}
+
+bootstrap().catch((error) => {
+  console.error(`Bootstrap failed: ${error.message}`);
+  process.exit(1);
+});

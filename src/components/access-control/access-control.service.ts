@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../infrastructure/db/prisma.service';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AccessOptions } from '../../common/interfaces/user/access-options.interface';
 
 @Injectable()

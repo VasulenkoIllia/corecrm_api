@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../../infrastructure/db/prisma.service';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { v4 as uuidv4 } from 'uuid';
 import { InviteDto } from '../../common/interfaces/auth/invite.interface';

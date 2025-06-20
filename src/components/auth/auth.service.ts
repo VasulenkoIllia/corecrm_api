@@ -6,7 +6,7 @@ import { LoginResponseDTO } from '../../common/dto/user/login.response.dto';
 import { IJwtPayload } from '../../common/interfaces/common/jwt-payload.interface';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { PrismaService } from '../../infrastructure/db/prisma.service';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
 import { RegisterCompanyDto } from '../../common/interfaces/auth/register-company.interface';

@@ -54,8 +54,8 @@ export class CarsController {
   }
 }
 
-@ApiTags('clients')
-@Controller('clients')
+@ApiTags('cars')
+@Controller('cars')
 @SetMetadata('module', 'cars')
 export class ClientsCarsController {
   private readonly logger = new Logger(ClientsCarsController.name);

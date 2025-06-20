@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ClientsController } from './clients.controller';
 import { ClientsService } from './clients.service';
-import { PrismaService } from '../../infrastructure/db/prisma.service';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AccessControlModule } from '../access-control/access-control.module';
-import { ElasticsearchModule } from '../../infrastructure/db/elasticsearch.module';
+import { ElasticsearchModule } from '../../infrastructure/elastic/elasticsearch.module';
 
 @Module({
   imports: [ElasticsearchModule, AccessControlModule],

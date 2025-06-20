@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from './prisma.service';
-import { RoleService } from './role.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { RoleService } from '../prisma/role.service';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from '../../components/user/user.service';
 

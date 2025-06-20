@@ -1,0 +1,139 @@
+  version: '3.8'
+  services:
+    app:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      ports:
+        - '${PORT:-3000}:3000' # Відкрито для зовнішнього доступу
+      env_file:
+        - .env
+      depends_on:
+        postgres:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+        rabbitmq:
+          condition: service_healthy
+        elasticsearch:
+          condition: service_healthy
+      restart: unless-stopped
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3000}/health"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+      networks:
+        - corecrm-network
+
+    postgres:
+      image: postgres:13.3
+      environment:
+        - POSTGRES_USER=${DB_USERNAME}
+        - POSTGRES_PASSWORD=${DB_PASSWORD}
+        - POSTGRES_DB=${DB_NAME}
+      ports:
+        - '${DB_PORT:-5432}:5432' # Відкрито в мережі Docker
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+      restart: unless-stopped
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+      networks:
+        - corecrm-network
+
+    redis:
+      image: redis:latest
+      command: redis-server --bind 0.0.0.0 --protected-mode no
+      ports:
+        - '${REDIS_PORT:-6379}:6379' # Відкрито в мережі Docker
+      volumes:
+        - redis_data:/data
+      deploy:
+        resources:
+          limits:
+            cpus: '0.50'
+            memory: 512M
+          reservations:
+            cpus: '0.25'
+            memory: 256M
+      restart: unless-stopped
+      tty: true
+      stdin_open: true
+      healthcheck:
+        test: ["CMD", "redis-cli", "ping"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+      networks:
+        - corecrm-network
+
+    rabbitmq:
+      image: rabbitmq:3-management-alpine
+      ports:
+        - '${RABBITMQ_PORT:-5672}:5672' # Відкрито в мережі Docker
+        - '127.0.0.1:15672:15672' # Обмежено до localhost для management UI
+      environment:
+        - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest}
+        - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-guest}
+      volumes:
+        - rabbitmq_data:/var/lib/rabbitmq
+      restart: unless-stopped
+      healthcheck:
+        test: ["CMD", "rabbitmqctl", "status"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+      networks:
+        - corecrm-network
+
+    elasticsearch:
+      image: docker.elastic.co/elasticsearch/elasticsearch:7.17.24
+      environment:
+        - discovery.type=single-node
+        - xpack.security.enabled=false
+        - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+        - bootstrap.memory_lock=true
+      ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+      ports:
+        - '${ELASTICSEARCH_PORT:-9200}:9200' # Відкрито в мережі Docker
+      volumes:
+        - elasticsearch_data:/usr/share/elasticsearch/data
+      restart: unless-stopped
+      healthcheck:
+        test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+      networks:
+        - corecrm-network
+
+    mailhog:
+      image: mailhog/mailhog:v1.0.1
+      ports:
+        - '1025:1025'
+        - '8025:8025'
+      restart: unless-stopped
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8025"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+      networks:
+        - corecrm-network
+
+  networks:
+    corecrm-network:
+      driver: bridge
+
+  volumes:
+    postgres_data:
+    redis_data:
+    rabbitmq_data:
+    elasticsearch_data:

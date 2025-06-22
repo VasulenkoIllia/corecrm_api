@@ -1,12 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
+import { ClientResponseDto } from '../../common/dto/client/client-response.dto';
 
 interface ClientSearchResult {
+  id: number;
   firstName: string;
   lastName: string;
   phone?: string;
   email?: string;
   companyId: number;
+  name_suggest: string;
 }
 
 @Injectable()
@@ -18,19 +21,25 @@ export class ElasticsearchIndexingService {
   async checkIndexExists(index: string): Promise<boolean> {
     try {
       const exists = await this.elasticsearch.indices.exists({ index });
+      this.logger.debug(`Index ${index} exists: ${exists.body}`);
       return exists.body;
     } catch (error) {
-      this.logger.error(`Failed to check index ${index}: ${error.message}`);
+      this.logger.error(`Failed to check index ${index}: ${error.message}`, error.stack);
       throw error;
     }
   }
 
   async deleteIndex(index: string): Promise<void> {
     try {
-      await this.elasticsearch.indices.delete({ index });
-      this.logger.log(`Index ${index} deleted`);
+      const exists = await this.checkIndexExists(index);
+      if (exists) {
+        await this.elasticsearch.indices.delete({ index });
+        this.logger.log(`Index ${index} deleted`);
+      } else {
+        this.logger.debug(`Index ${index} does not exist, no need to delete`);
+      }
     } catch (error) {
-      this.logger.error(`Failed to delete index ${index}: ${error.message}`);
+      this.logger.error(`Failed to delete index ${index}: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -39,16 +48,19 @@ export class ElasticsearchIndexingService {
     index: string,
     id: string,
     document: T,
-    mapping: Record<string, any>,
+    mapping?: Record<string, any>,
   ): Promise<void> {
     try {
-      const indexExists = await this.elasticsearch.indices.exists({ index });
-      if (!indexExists.body) {
+      const indexExists = await this.checkIndexExists(index);
+      if (!indexExists && mapping) {
         this.logger.log(`Creating index ${index} with mapping`);
         await this.elasticsearch.indices.create({
           index,
           body: mapping,
         });
+      } else if (!indexExists) {
+        this.logger.warn(`Index ${index} does not exist and no mapping provided`);
+        throw new NotFoundException(`Index ${index} does not exist and no mapping provided`);
       }
 
       await this.elasticsearch.index({
@@ -58,7 +70,52 @@ export class ElasticsearchIndexingService {
       });
       this.logger.log(`Document indexed in ${index} with id ${id}`);
     } catch (error) {
-      this.logger.error(`Failed to index document in ${index}: ${error.message}`);
+      this.logger.error(`Failed to index document in ${index} with id ${id}: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  async updateDocument<T>(
+    index: string,
+    id: string,
+    document: T,
+  ): Promise<void> {
+    try {
+      const exists = await this.elasticsearch.exists({ index, id });
+      if (!exists.body) {
+        this.logger.warn(`Document with id ${id} not found in index ${index}`);
+        throw new NotFoundException(`Document ${id} not found in index ${index}`);
+      }
+
+      await this.elasticsearch.update({
+        index,
+        id,
+        body: {
+          doc: document,
+        },
+      });
+      this.logger.log(`Document updated in ${index} with id ${id}`);
+    } catch (error) {
+      this.logger.error(`Failed to update document in ${index} with id ${id}: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  async deleteDocument(index: string, id: string): Promise<void> {
+    try {
+      const exists = await this.elasticsearch.exists({ index, id });
+      if (!exists.body) {
+        this.logger.debug(`Document with id ${id} not found in index ${index}, no need to delete`);
+        return;
+      }
+
+      await this.elasticsearch.delete({
+        index,
+        id,
+      });
+      this.logger.log(`Document deleted from ${index} with id ${id}`);
+    } catch (error) {
+      this.logger.error(`Failed to delete document from ${index} with id ${id}: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -68,9 +125,9 @@ export class ElasticsearchIndexingService {
     query: string,
     suggestField: string,
     companyId?: number,
-  ): Promise<{ results: any[]; suggestions: string[] }> {
+  ): Promise<{ results: ClientResponseDto[]; suggestions: string[] }> {
     try {
-      const searchRequest: any = {
+      const searchRequest = {
         index,
         body: {
           query: {
@@ -82,7 +139,7 @@ export class ElasticsearchIndexingService {
                     fields: ['firstName', 'lastName', 'phone', 'email', `${suggestField}^3`],
                     type: 'best_fields',
                     fuzziness: 'AUTO',
-                    minimum_should_match: '50%', // Гнучкість для часткових збігів
+                    minimum_should_match: '50%',
                   },
                 },
               ],
@@ -97,18 +154,26 @@ export class ElasticsearchIndexingService {
         },
       };
 
-      this.logger.log(`Search request: ${JSON.stringify(searchRequest)}`);
-      const result: any = await this.elasticsearch.search<ClientSearchResult>(searchRequest);
-      this.logger.log(`Search result: ${JSON.stringify(result.body)}`);
+      this.logger.debug(`Search request for index ${index}: ${JSON.stringify(searchRequest)}`);
+      const result = await this.elasticsearch.search(searchRequest);
 
-      const hits = result.body.hits.hits.map((hit: any) => hit._source);
+      const hits = result.body.hits.hits.map((hit: { _id: string | number; _source: ClientSearchResult }) => ({
+        id: parseInt(String(hit._id), 10),
+        firstName: hit._source.firstName,
+        lastName: hit._source.lastName,
+        phone: hit._source.phone,
+        email: hit._source.email,
+        companyId: hit._source.companyId,
+      }));
+
       const suggestions = result.body.hits.hits
-        .map((hit: any) => hit._source[suggestField])
+        .map((hit: { _source: ClientSearchResult }) => hit._source[suggestField])
         .filter((value: string, index: number, self: string[]) => value && self.indexOf(value) === index);
 
-      return { results: hits, suggestions };
+      this.logger.log(`Found ${hits.length} results for query "${query}" in index ${index}`);
+      return { results: hits.map(client => new ClientResponseDto(client)), suggestions };
     } catch (error) {
-      this.logger.error(`Failed to search in ${index}: ${error.message}`);
+      this.logger.error(`Failed to search in ${index} with query "${query}": ${error.message}`, error.stack);
       throw error;
     }
   }

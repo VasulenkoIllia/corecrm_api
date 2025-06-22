@@ -3,7 +3,7 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { Prisma } from '@prisma/client';
-import { RoleDto } from '../../common/dto/user/role.dto'; // Оновлено імпорт
+import { RoleDto } from '../../common/dto/user/role.dto';
 
 @Injectable()
 export class UserService {
@@ -83,7 +83,7 @@ export class UserService {
   async getUserRoles(userId: number): Promise<RoleDto[]> {
     const companyUsers = await this.prisma.companyUsers.findMany({
       where: { userId },
-      include: { companyRoles: { include: { companyRole: { include: { permissions: true } } } } },
+      include: { companyRoles: { include: { companyRole: { include: { permissions: { include: { module: true } } } } } } },
     });
 
     const roles = companyUsers.flatMap(cu =>
@@ -93,7 +93,7 @@ export class UserService {
         description: cr.companyRole.description,
         companyId: cr.companyRole.companyId,
         permissions: cr.companyRole.permissions.map(p => ({
-          module: p.module,
+          module: p.module.name, // Змінено з p.module на p.module.name
           read: p.read,
           create: p.create,
           update: p.update,
@@ -149,7 +149,15 @@ export class UserService {
   async createCompanyWithDirector(email: string, password: string, name: string, companyName: string) {
     return this.prisma.$transaction(async (tx) => {
       const company = await tx.company.create({
-        data: { name: companyName, modules: { services: true, stock: true } },
+        data: {
+          name: companyName,
+          modules: {
+            create: [
+              { module: { connect: { name: 'services' } } },
+              { module: { connect: { name: 'stock' } } },
+            ],
+          },
+        },
       });
 
       const user = await this.createUser(

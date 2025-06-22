@@ -1,5 +1,4 @@
-// role-management.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { CreateCompanyRoleDto } from '../../common/dto/company/create-company-role.dto';
 import { SetRolePermissionsDto } from '../../common/dto/company/set-role-permissions.dto';
@@ -21,15 +20,27 @@ export class RoleManagementService {
   }
 
   async setRolePermissions(data: SetRolePermissionsDto) {
-    return this.prisma.companyRolePermissions.createMany({
-      data: data.permissions.map(p => ({
+    const modulePromises = data.permissions.map(async p => {
+      const module = await this.prisma.module.findUnique({
+        where: { name: p.module },
+      });
+      if (!module) {
+        throw new NotFoundException(`Module ${p.module} not found`);
+      }
+      return {
         roleId: data.roleId,
-        module: p.module,
+        moduleId: module.id,
         read: p.read,
         create: p.create,
         update: p.update,
         delete: p.delete,
-      })),
+      };
+    });
+
+    const permissionsData = await Promise.all(modulePromises);
+
+    return this.prisma.companyRolePermissions.createMany({
+      data: permissionsData,
     });
   }
 
@@ -51,7 +62,7 @@ export class RoleManagementService {
     const roles = await this.prisma.companyRole.findMany({
       where: { companyId },
       include: {
-        permissions: true,
+        permissions: { include: { module: true } },
       },
     });
 
@@ -61,7 +72,7 @@ export class RoleManagementService {
         name: role.name,
         description: role.description,
         permissions: role.permissions.map(p => ({
-          module: p.module,
+          module: p.module.name,
           read: p.read,
           create: p.create,
           update: p.update,

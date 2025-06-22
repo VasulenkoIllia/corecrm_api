@@ -1,7 +1,7 @@
-import { IsEmail, IsInt, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
 
-export class CreateClientDto {
+export class UpdateClientDto {
   @ApiProperty({ example: 'Іван', description: 'Ім’я клієнта' })
   @IsString()
   firstName: string;
@@ -19,11 +19,4 @@ export class CreateClientDto {
   @IsOptional()
   @IsEmail()
   email?: string;
-
-  @IsInt()
-  companyId: number;
 }
-
-
-
-

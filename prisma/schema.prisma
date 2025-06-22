@@ -34,13 +34,13 @@ model Role {
 }
 
 model Company {
-  id                 Int            @id @default(autoincrement())
+  id                 Int              @id @default(autoincrement())
   name               String
-  status             String         @default("active")
-  subscriptionStatus String         @default("active")
-  modules            Json           @default("{\"clients\": false, \"cars\": false, \"invoices\": false, \"reports\": false}")
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  status             String           @default("active")
+  subscriptionStatus String           @default("active")
+  modules            CompanyModules[] // Новий зв’язок із модулями
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
   users              CompanyUsers[]
   roles              CompanyRole[]
   invitations        Invitations[]
@@ -67,7 +67,7 @@ model UserCompanyRoles {
   companyRoleId Int
   userCompany   CompanyUsers @relation("UserCompanyRolesRelation", fields: [userCompanyId], references: [id])
   companyRole   CompanyRole  @relation(fields: [companyRoleId], references: [id])
-  assignedAt    DateTime     @default(now()) // Додано для відстеження дати призначення
+  assignedAt    DateTime     @default(now())
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -88,19 +88,42 @@ model CompanyRole {
   @@unique([companyId, name])
 }
 
+model Module {
+  id          Int                      @id @default(autoincrement())
+  name        String                   @unique
+  description String?
+  companies   CompanyModules[]
+  permissions CompanyRolePermissions[]
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+}
+
+model CompanyModules {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  moduleId  Int
+  company   Company  @relation(fields: [companyId], references: [id])
+  module    Module   @relation(fields: [moduleId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, moduleId])
+}
+
 model CompanyRolePermissions {
   id        Int         @id @default(autoincrement())
   roleId    Int
-  module    String
+  moduleId  Int
   read      Boolean     @default(false)
   create    Boolean     @default(false)
   update    Boolean     @default(false)
   delete    Boolean     @default(false)
   role      CompanyRole @relation(fields: [roleId], references: [id])
+  module    Module      @relation(fields: [moduleId], references: [id])
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  @@unique([roleId, module])
+  @@unique([roleId, moduleId])
 }
 
 model Invitations {

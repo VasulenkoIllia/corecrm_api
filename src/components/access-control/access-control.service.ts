@@ -52,30 +52,33 @@ export class AccessControlService {
         throw new ForbiddenException('Company subscription expired');
       }
 
-      // Check if user has global superadmin role
+      // Check if user has global superadmin or director role
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         include: { role: true },
       });
-      if (user?.role?.name === 'superadmin') {
-        this.logger.log(`User ${userId} is superadmin, bypassing checks`);
+      if (user?.role?.name === 'superadmin' || user?.role?.name === 'director') {
+        this.logger.log(`User ${userId} is ${user.role.name}, bypassing module permission checks`);
         return true;
       }
 
       // Check module access
       this.logger.log(`Checking module: ${options.module}`);
       if (options.module) {
-        const validModules = ['clients', 'cars', 'invoices', 'reports', 'roles'];
-        if (!validModules.includes(options.module)) {
+        // Перевіряємо, чи модуль існує
+        const module = await this.prisma.module.findUnique({
+          where: { name: options.module },
+        });
+        if (!module) {
           this.logger.warn(`Invalid module: ${options.module}`);
           throw new ForbiddenException(`Invalid module: ${options.module}`);
         }
-        this.logger.log(`Company modules: ${JSON.stringify(company.modules)}`);
-        if (!company.modules || typeof company.modules !== 'object') {
-          this.logger.warn(`Invalid modules format for company ${companyId}`);
-          throw new ForbiddenException('Invalid modules configuration');
-        }
-        if (!company.modules[options.module]) {
+
+        // Перевіряємо, чи модуль активовано для компанії
+        const companyModule = await this.prisma.companyModules.findFirst({
+          where: { companyId, moduleId: module.id },
+        });
+        if (!companyModule) {
           this.logger.warn(`${options.module} module is disabled for company ${companyId}`);
           throw new ForbiddenException(`${options.module} module is disabled`);
         }
@@ -89,7 +92,7 @@ export class AccessControlService {
 
         let hasPermission = false;
         for (const userCompanyRole of userCompanyRoles) {
-          const permission = userCompanyRole.companyRole.permissions.find(p => p.module === options.module);
+          const permission = userCompanyRole.companyRole.permissions.find(p => p.moduleId === module.id);
           if (permission) {
             if (options.action) {
               const actionMap = {

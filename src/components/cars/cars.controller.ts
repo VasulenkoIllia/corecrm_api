@@ -7,6 +7,9 @@ import { User } from '../../common/decorators/user.decorator';
 import { IJwtPayload } from '../../common/interfaces/common/jwt-payload.interface';
 import { CreateCarDto } from '../../common/dto/car/create-car.dto';
 
+/**
+ * Контролер для управління автомобілями
+ */
 @ApiTags('cars')
 @Controller('cars')
 @SetMetadata('module', 'cars')
@@ -20,7 +23,7 @@ export class CarsController {
   // @ApiOperation({ summary: 'Декодувати VIN (mock для dev)' })
   // @ApiOkResponse({
   //   status: 200,
-  //   description: 'Декодовані дані автомобіля',
+  //   description: 'Decoded car data',
   //   schema: { properties: { data: { type: 'object' } } }
   // })
   // @ApiBody({
@@ -38,22 +41,28 @@ export class CarsController {
   //   return this.carsService.vinDecode(vinDecodeDto, user.companyId, user.id);
   // }
 
+  /**
+   * Отримання деталей автомобіля за ідентифікатором
+   */
   @SecureEndpoint(':id', RequestMethod.GET)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Отримати деталі автомобіля' })
   @ApiOkResponse({
     status: 200,
-    description: 'Деталі автомобіля',
+    description: 'Car details',
     schema: { properties: { data: { type: 'object' } } }
   })
   @ApiParam({ name: 'id', description: 'ID автомобіля', example: 1 })
   @CatchError('Отримання деталей автомобіля')
   async getCar(@Param('id') id: string, @User() user: IJwtPayload) {
-    console.log(111);
+    this.logger.log(`Fetching car ${id} for company ${user.companyId} by user ${user.id}`);
     return this.carsService.getCar(+id, user.companyId, user.id);
   }
 }
 
+/**
+ * Контролер для управління автомобілями клієнтів
+ */
 @ApiTags('cars')
 @Controller('cars')
 @SetMetadata('module', 'cars')
@@ -62,12 +71,15 @@ export class ClientsCarsController {
 
   constructor(private readonly carsService: CarsService) {}
 
+  /**
+   * Додавання автомобіля до клієнта
+   */
   @SecureEndpoint(':id/cars', RequestMethod.POST)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Додати автомобіль до клієнта' })
   @ApiOkResponse({
     status: 201,
-    description: 'Автомобіль додано',
+    description: 'Car added',
     schema: { properties: { message: { type: 'string' }, data: { type: 'object' } } }
   })
   @ApiParam({ name: 'id', description: 'ID клієнта', example: 1 })
@@ -90,22 +102,25 @@ export class ClientsCarsController {
   })
   @CatchError('Додавання автомобіля до клієнта')
   async addCar(@Param('id') clientId: string, @Body() createCarDto: CreateCarDto, @User() user: IJwtPayload) {
-    console.log(111);
+    this.logger.log(`Adding car for client ${clientId} in company ${user.companyId} by user ${user.id}`);
     return this.carsService.addCar(+clientId, createCarDto, user.companyId, user.id);
   }
 
+  /**
+   * Отримання списку автомобілів клієнта
+   */
   @SecureEndpoint(':id/cars', RequestMethod.GET)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Отримати список автомобілів клієнта' })
   @ApiOkResponse({
     status: 200,
-    description: 'Список автомобілів клієнта',
+    description: 'List of client\'s cars',
     schema: { properties: { data: { type: 'array', items: { type: 'object' } } } }
   })
   @ApiParam({ name: 'id', description: 'ID клієнта', example: 1 })
   @CatchError('Отримання автомобілів клієнта')
   async getClientCars(@Param('id') clientId: string, @User() user: IJwtPayload) {
-    console.log(111);
+    this.logger.log(`Fetching cars for client ${clientId} in company ${user.companyId} by user ${user.id}`);
     return this.carsService.getClientCars(+clientId, user.companyId, user.id);
   }
 }

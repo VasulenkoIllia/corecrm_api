@@ -63,7 +63,7 @@ export class RoleController {
   @ApiOperation({ summary: 'Призначити роль користувачу в компанії' })
   @ApiOkResponse({
     status: 200,
-    description: 'Роль успішно призначено користувачу',
+    description: 'Role successfully assigned to user',
     schema: {
       properties: {
         message: { type: 'string', example: 'Роль призначено' },
@@ -104,7 +104,7 @@ export class RoleController {
   @AccessControlEndpoint('/roles/company/:companyId', { module: 'roles', action: 'read', requiredRole: 'director' })
   @ApiOkResponse({
     status: 200,
-    description: 'Список ролей компанії з дозволами',
+    description: 'List of company roles with permissions',
     type: GetCompanyRolesResponseDto,
   })
   async getCompanyRoles(@Param('companyId', ParseIntPipe) companyId: number) {

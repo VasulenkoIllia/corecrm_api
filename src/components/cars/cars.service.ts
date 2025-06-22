@@ -4,6 +4,9 @@ import { AccessControlService } from '../access-control/access-control.service';
 import { CreateCarDto } from '../../common/dto/car/create-car.dto';
 
 
+/**
+ * Сервіс для роботи з автомобілями
+ */
 @Injectable()
 export class CarsService {
   constructor(

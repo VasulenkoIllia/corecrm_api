@@ -7,6 +7,9 @@ import { UpdateClientDto } from '../../common/dto/client/update-client.dto';
 import { SearchClientDto } from '../../common/dto/client/search-client.dto';
 import { ClientResponseDto } from '../../common/dto/client/client-response.dto';
 
+/**
+ * Сервіс для роботи з клієнтами
+ */
 @Injectable()
 export class ClientsService {
   private readonly logger = new Logger(ClientsService.name);
@@ -17,6 +20,9 @@ export class ClientsService {
     private accessControlService: AccessControlService,
   ) {}
 
+  /**
+   * Створення нового клієнта
+   */
   async createClient(createClientDto: CreateClientDto, userId: number) {
     await this.accessControlService.checkAccess(userId, createClientDto.companyId, { module: 'clients', action: 'create' });
 
@@ -26,7 +32,7 @@ export class ClientsService {
       });
       if (existingClientByPhone) {
         this.logger.warn(`Client with phone ${createClientDto.phone} already exists`);
-        throw new BadRequestException(`Клієнт із номером телефону ${createClientDto.phone} уже існує`);
+        throw new BadRequestException(`Client with phone number ${createClientDto.phone} already exists`);
       }
     }
 
@@ -36,7 +42,7 @@ export class ClientsService {
       });
       if (existingClientByEmail) {
         this.logger.warn(`Client with email ${createClientDto.email} already exists`);
-        throw new BadRequestException(`Клієнт із email ${createClientDto.email} уже існує`);
+        throw new BadRequestException(`Client with email ${createClientDto.email} already exists`);
       }
     }
 
@@ -101,9 +107,12 @@ export class ClientsService {
     );
 
     this.logger.log(`Client created with ID ${client.id} for company ${createClientDto.companyId}`);
-    return { message: 'Клієнт створено', data: new ClientResponseDto(client) };
+    return { message: 'Client created', data: new ClientResponseDto(client) };
   }
 
+  /**
+   * Пошук клієнтів за запитом
+   */
   async searchClients(searchClientDto: SearchClientDto, companyId: number, userId: number) {
     await this.accessControlService.checkAccess(userId, companyId, { module: 'clients', action: 'read' });
 
@@ -119,6 +128,9 @@ export class ClientsService {
     return { data: results, suggestions };
   }
 
+  /**
+   * Отримання списку клієнтів компанії
+   */
   async getClients(companyId: number, userId: number) {
     await this.accessControlService.checkAccess(userId, companyId, { module: 'clients', action: 'read' });
 
@@ -130,6 +142,9 @@ export class ClientsService {
     return clients.map(client => new ClientResponseDto(client));
   }
 
+  /**
+   * Отримання клієнта за ідентифікатором
+   */
   async getClientById(id: number, companyId: number, userId: number) {
     await this.accessControlService.checkAccess(userId, companyId, { module: 'clients', action: 'read' });
 
@@ -146,6 +161,9 @@ export class ClientsService {
     return new ClientResponseDto(client);
   }
 
+  /**
+   * Оновлення даних клієнта
+   */
   async updateClient(id: number, dto: UpdateClientDto, companyId: number, userId: number) {
     await this.accessControlService.checkAccess(userId, companyId, { module: 'clients', action: 'update' });
 
@@ -164,7 +182,7 @@ export class ClientsService {
       });
       if (existingClientByPhone) {
         this.logger.warn(`Client with phone ${dto.phone} already exists`);
-        throw new BadRequestException(`Клієнт із номером телефону ${dto.phone} уже існує`);
+        throw new BadRequestException(`Client with phone number ${dto.phone} already exists`);
       }
     }
 
@@ -174,7 +192,7 @@ export class ClientsService {
       });
       if (existingClientByEmail) {
         this.logger.warn(`Client with email ${dto.email} already exists`);
-        throw new BadRequestException(`Клієнт із email ${dto.email} уже існує`);
+        throw new BadRequestException(`Client with email ${dto.email} already exists`);
       }
     }
 
@@ -206,6 +224,9 @@ export class ClientsService {
     return new ClientResponseDto(updatedClient);
   }
 
+  /**
+   * Видалення клієнта
+   */
   async deleteClient(id: number, companyId: number, userId: number) {
     await this.accessControlService.checkAccess(userId, companyId, { module: 'clients', action: 'delete' });
 

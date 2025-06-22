@@ -20,7 +20,7 @@ export class ModulesController {
   @ApiOperation({ summary: 'Активувати модуль для компанії' })
   @ApiOkResponse({
     status: 200,
-    description: 'Модуль активовано',
+    description: 'Module activated',
     schema: { properties: { message: { type: 'string' }, data: { type: 'object' } } }
   })
   @ApiParam({ name: 'moduleName', description: 'Назва модуля (clients, cars, invoices, reports)', example: 'clients' })
@@ -35,7 +35,7 @@ export class ModulesController {
   @ApiOperation({ summary: 'Отримати активні модулі компанії' })
   @ApiOkResponse({
     status: 200,
-    description: 'Список активних модулів',
+    description: 'List of active modules',
     schema: { properties: { data: { type: 'object' } } }
   })
   @CatchError('Отримання модулів')
@@ -49,7 +49,7 @@ export class ModulesController {
   @ApiOperation({ summary: 'Оновити модулі компанії' })
   @ApiOkResponse({
     status: 200,
-    description: 'Модулі оновлено',
+    description: 'Modules updated',
     schema: { properties: { message: { type: 'string' }, data: { type: 'object' } } }
   })
   @ApiBody({
@@ -73,7 +73,7 @@ export class ModulesController {
   @ApiOperation({ summary: 'Деактивувати модуль для компанії' })
   @ApiOkResponse({
     status: 200,
-    description: 'Модуль деактивовано',
+    description: 'Module deactivated',
     schema: { properties: { message: { type: 'string' }, data: { type: 'object' } } }
   })
   @ApiParam({ name: 'moduleName', description: 'Назва модуля (clients, cars, invoices, reports)', example: 'clients' })

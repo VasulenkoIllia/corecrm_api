@@ -9,6 +9,9 @@ import { CreateClientDto } from '../../common/dto/client/create-client.dto';
 import { ClientResponseDto } from '../../common/dto/client/client-response.dto';
 import { UpdateClientDto } from '../../common/dto/client/update-client.dto';
 
+/**
+ * Контролер для управління клієнтами
+ */
 @ApiTags('Clients')
 @Controller('clients')
 export class ClientsController {
@@ -16,12 +19,15 @@ export class ClientsController {
 
   constructor(private readonly clientsService: ClientsService) {}
 
+  /**
+   * Створення нового клієнта
+   */
   @AccessControlEndpoint('create', { module: 'clients', action: 'create' })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Створити нового клієнта' })
   @ApiOkResponse({
     status: 201,
-    description: 'Клієнт успішно створено',
+    description: 'Client successfully created',
     type: ClientResponseDto,
   })
   @ApiBody({
@@ -44,12 +50,15 @@ export class ClientsController {
     this.logger.log(`Creating client for company ${createClientDto.companyId} by user ${user.id}`);
     return this.clientsService.createClient(createClientDto, user.id);
   }
+  /**
+   * Отримання списку клієнтів компанії
+   */
   @AccessControlEndpoint('get', { module: 'clients', action: 'read' }, RequestMethod.GET)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Отримати список клієнтів компанії' })
   @ApiOkResponse({
     status: 200,
-    description: 'Список клієнтів',
+    description: 'List of clients',
     type: [ClientResponseDto],
   })
   @CatchError('Отримання клієнтів')
@@ -58,12 +67,15 @@ export class ClientsController {
     return this.clientsService.getClients(user.companyId, user.id);
   }
 
+  /**
+   * Отримання клієнта за ідентифікатором
+   */
   @AccessControlEndpoint(':id', { module: 'clients', action: 'read' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Отримати клієнта за ID' })
   @ApiOkResponse({
     status: 200,
-    description: 'Дані клієнта',
+    description: 'Client data',
     type: ClientResponseDto,
   })
   @ApiParam({ name: 'id', description: 'ID клієнта', type: Number })
@@ -73,12 +85,15 @@ export class ClientsController {
     return this.clientsService.getClientById(id, user.companyId, user.id);
   }
 
+  /**
+   * Оновлення даних клієнта
+   */
   @AccessControlEndpoint(':id', { module: 'clients', action: 'update' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Оновити дані клієнта' })
   @ApiOkResponse({
     status: 200,
-    description: 'Клієнт оновлено',
+    description: 'Client updated',
     type: ClientResponseDto,
   })
   @ApiParam({ name: 'id', description: 'ID клієнта', type: Number })
@@ -106,12 +121,15 @@ export class ClientsController {
     return this.clientsService.updateClient(id, updateClientDto, user.companyId, user.id);
   }
 
+  /**
+   * Видалення клієнта
+   */
   @AccessControlEndpoint(':id', { module: 'clients', action: 'delete' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Видалити клієнта' })
   @ApiOkResponse({
     status: 200,
-    description: 'Клієнт видалено',
+    description: 'Client deleted',
     schema: { properties: { message: { type: 'string', example: 'Client deleted' } } },
   })
   @ApiParam({ name: 'id', description: 'ID клієнта', type: Number })

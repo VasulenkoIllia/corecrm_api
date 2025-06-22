@@ -59,22 +59,17 @@ cd .. && yarn prisma:migrate:dev && cd scripts
 echo -e "${YELLOW}Перевіряємо статус сервісів...${NC}"
 docker-compose -f ../docker-compose.dev.yaml ps
 
-# Інструкція для запуску бекенду
-echo -e "${GREEN}Сервіси запущено. Для запуску бекенду виконайте:${NC}"
-echo -e "${YELLOW}cd ..${NC}"
-echo -e "${YELLOW}yarn install --frozen-lockfile --legacy-peer-deps${NC}"
-echo -e "${YELLOW}yarn start:dev${NC}"
 
 # Перевірка доступності сервісів із повторними спробами
-echo -e "${YELLOW}Перевірка доступності сервісів (затримка 40 секунд)...${NC}"
-sleep 40
+echo -e "${YELLOW}Перевірка доступності сервісів (затримка 5 секунд)...${NC}"
+sleep 5
 
 # Функція для перевірки сервісу з повторними спробами
 check_service() {
     local cmd=$1
     local success_msg=$2
     local error_msg=$3
-    local max_attempts=5
+    local max_attempts=2
     local attempt=1
 
     while [ $attempt -le $max_attempts ]; do
@@ -83,7 +78,7 @@ check_service() {
             echo -e "${GREEN}$success_msg${NC}"
             return 0
         fi
-        sleep 5
+        sleep 2
         attempt=$((attempt + 1))
     done
     echo -e "${RED}$error_msg${NC}"
@@ -93,7 +88,7 @@ check_service() {
 # Перевірка PostgreSQL
 check_service \
     "docker exec $(docker ps -q -f name=postgres) pg_isready -U ${DB_USERNAME}" \
-    "PostgreSQL доступний на localhost:${DB_PORT:-5432}" \
+    "PostgreSQL доступний на http://localhost:${DB_PORT:-5432}" \
     "PostgreSQL недоступний. Перевірте логи: docker-compose -f ../docker-compose.dev.yaml logs postgres"
 
 # Перевірка Elasticsearch
@@ -105,7 +100,7 @@ check_service \
 # Перевірка Redis
 #check_service \
 #    "redis-cli -h localhost -p ${REDIS_PORT:-6379} ping" \
-#    "Redis доступний на localhost:${REDIS_PORT:-6379}" \
+#    "Redis доступний на http://localhost:${REDIS_PORT:-6379}" \
 #    "Redis недоступний. Перевірте логи: docker-compose -f ../docker-compose.dev.yaml logs redis"
 
 # Перевірка Mailhog
@@ -119,3 +114,9 @@ check_service \
     "docker exec $(docker ps -q -f name=rabbitmq) rabbitmqctl status" \
     "RabbitMQ доступний" \
     "RabbitMQ недоступний. Перевірте логи: docker-compose -f ../docker-compose.dev.yaml logs rabbitmq"
+
+# Інструкція для запуску бекенду
+echo -e "${GREEN}Сервіси запущено. Для запуску бекенду виконайте:${NC}"
+echo -e "${YELLOW}cd ..${NC}"
+echo -e "${YELLOW}yarn install --frozen-lockfile --legacy-peer-deps${NC}"
+echo -e "${YELLOW}yarn start:dev${NC}"

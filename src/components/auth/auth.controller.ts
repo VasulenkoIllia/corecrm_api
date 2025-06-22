@@ -69,6 +69,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Confirm user email with token' })
   @ApiOkResponse({ status: 200, description: 'Email confirmed', schema: { properties: { message: { type: 'string' } } } })
+  // @ApiBody({type: })
   @CatchError('Confirming email')
   async confirmEmail(@Query('token') token: string) {
     return this.authService.confirmEmail(token);

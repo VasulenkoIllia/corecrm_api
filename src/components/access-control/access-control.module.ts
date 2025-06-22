@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AccessControlService } from './access-control.service';
+import { RoleManagementService } from './role-management.service';
+import { RoleController } from './role.controller';
 
 /**
  * Модуль, який забезпечує функціональність контролю доступу для додатку.
@@ -8,12 +10,13 @@ import { AccessControlService } from './access-control.service';
  * Потребує PrismaService для доступу до бази даних.
  */
 @Module({
+  controllers: [RoleController],
   providers: [
     AccessControlService,
-    PrismaService
+    PrismaService,RoleManagementService
   ],
   exports: [
-    AccessControlService
+    AccessControlService,RoleManagementService
   ],
 })
 export class AccessControlModule {}

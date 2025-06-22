@@ -24,10 +24,15 @@ export class RoleGuard implements CanActivate {
    */
   async canActivate(
     context: ExecutionContext,
-  ){
+  ) {
     const request = context.switchToHttp().getRequest();
-    console.log(request)
-    const { requiredRole } = this.reflector.get(ACCESS_CONTROL_METADATA, context.getHandler()) || { accessOptions: {} };
+    const metadata = this.reflector.get(ACCESS_CONTROL_METADATA, context.getHandler()) || { accessOptions: {} };
+    const { requiredRole } = metadata.accessOptions || {};
+
+    if (!requiredRole) {
+      return true; // Якщо requiredRole не вказано, гард пропускає запит
+    }
+
     const user = request.user;
 
     if (!user || !user.id) {

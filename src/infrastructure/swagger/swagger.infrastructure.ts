@@ -58,6 +58,7 @@ private getSwaggerSpecDocument(app: INestApplication): OpenAPIObject {
     .addTag('stock', 'Stock management endpoints')
     .addTag('cars', 'Car management endpoints') // Виправлено опис
     .addTag('documents', 'Document management endpoints')
+    .addTag('roles', 'Role management endpoints')
     .build();
 
   return SwaggerModule.createDocument(app, options, {

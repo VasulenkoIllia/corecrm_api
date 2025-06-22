@@ -20,7 +20,7 @@ model User {
   resetTokenExpires DateTime?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
-  companies         CompanyUsers[]
+  companyUsers      CompanyUsers[] @relation("UserCompanyRelation")
   invitations       Invitations[]
 }
 
@@ -38,25 +38,69 @@ model Company {
   name               String
   status             String         @default("active")
   subscriptionStatus String         @default("active")
-  modules            Json           @default("{\"clients\": false, \"cars\": false, \"invoices\": false, \"reports\": false}") // Структура: { clients: boolean, cars: boolean, invoices: boolean, reports: boolean }
+  modules            Json           @default("{\"clients\": false, \"cars\": false, \"invoices\": false, \"reports\": false}")
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   users              CompanyUsers[]
+  roles              CompanyRole[]
   invitations        Invitations[]
   clients            Client[]
   cars               Car[]
 }
 
 model CompanyUsers {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  companyId Int
-  user      User     @relation(fields: [userId], references: [id])
-  company   Company  @relation(fields: [companyId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int                @id @default(autoincrement())
+  userId       Int
+  companyId    Int
+  user         User               @relation("UserCompanyRelation", fields: [userId], references: [id])
+  company      Company            @relation(fields: [companyId], references: [id])
+  companyRoles UserCompanyRoles[] @relation("UserCompanyRolesRelation")
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   @@unique([userId, companyId])
+}
+
+model UserCompanyRoles {
+  id            Int          @id @default(autoincrement())
+  userCompanyId Int
+  companyRoleId Int
+  userCompany   CompanyUsers @relation("UserCompanyRolesRelation", fields: [userCompanyId], references: [id])
+  companyRole   CompanyRole  @relation(fields: [companyRoleId], references: [id])
+  assignedAt    DateTime     @default(now()) // Додано для відстеження дати призначення
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([userCompanyId, companyRoleId])
+}
+
+model CompanyRole {
+  id          Int                      @id @default(autoincrement())
+  companyId   Int
+  name        String
+  description String?
+  company     Company                  @relation(fields: [companyId], references: [id])
+  users       UserCompanyRoles[]
+  permissions CompanyRolePermissions[]
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  @@unique([companyId, name])
+}
+
+model CompanyRolePermissions {
+  id        Int         @id @default(autoincrement())
+  roleId    Int
+  module    String
+  read      Boolean     @default(false)
+  create    Boolean     @default(false)
+  update    Boolean     @default(false)
+  delete    Boolean     @default(false)
+  role      CompanyRole @relation(fields: [roleId], references: [id])
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([roleId, module])
 }
 
 model Invitations {

@@ -22,7 +22,7 @@ export class ModulesService {
 
     await this.accessControlService.checkAccess(userId, companyId, { requiredRole: 'director' });
 
-    const validModules = ['clients', 'cars', 'invoices', 'reports'];
+    const validModules = ['clients', 'cars', 'invoices', 'reports', 'roles'];
     if (!validModules.includes(moduleName)) {
       this.logger.warn(`Invalid module name: ${moduleName}`);
       throw new ForbiddenException(`Module ${moduleName} is not supported`);

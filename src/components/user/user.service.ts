@@ -3,6 +3,7 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { Prisma } from '@prisma/client';
+import { RoleDto } from '../../common/dto/user/role.dto'; // Оновлено імпорт
 
 @Injectable()
 export class UserService {
@@ -65,7 +66,7 @@ export class UserService {
   async findById(id: number) {
     return this.prisma.user.findUnique({
       where: { id },
-      include: { role: true, companies: { include: { company: true } } },
+      include: { role: true, companyUsers: { include: { company: true, companyRoles: { include: { companyRole: true } } } } },
     });
   }
 
@@ -77,6 +78,31 @@ export class UserService {
       throw new NotFoundException('User not associated with any company');
     }
     return companyUser;
+  }
+
+  async getUserRoles(userId: number): Promise<RoleDto[]> {
+    const companyUsers = await this.prisma.companyUsers.findMany({
+      where: { userId },
+      include: { companyRoles: { include: { companyRole: { include: { permissions: true } } } } },
+    });
+
+    const roles = companyUsers.flatMap(cu =>
+      cu.companyRoles.map(cr => ({
+        id: cr.companyRole.id,
+        name: cr.companyRole.name,
+        description: cr.companyRole.description,
+        companyId: cr.companyRole.companyId,
+        permissions: cr.companyRole.permissions.map(p => ({
+          module: p.module,
+          read: p.read,
+          create: p.create,
+          update: p.update,
+          delete: p.delete,
+        })),
+      }))
+    );
+
+    return roles;
   }
 
   async checkUserExists(email: string, prismaClient: Prisma.TransactionClient | PrismaService = this.prisma): Promise<boolean> {

@@ -2,10 +2,9 @@ import { Controller, Logger, NotFoundException, Req, RequestMethod } from '@nest
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { SecureEndpoint } from '../../common/decorators/secure-endpoint.decorator';
-import { UserResponseDTO } from '../../common/dto/user/user.response.dto';
 import { CatchError } from '../../common/decorators/catch-error.decorator';
 import { IAuthorizedRequest } from '../../common/interfaces/common/authorized-request.interface';
-
+import { UserMeResponseDto } from '../../common/dto/user/user-me-response.dto'; // Додано
 
 /**
  * Контролер для роботи з користувачами
@@ -19,9 +18,10 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @SecureEndpoint('me', RequestMethod.GET)
-  @ApiOkResponse({ type: UserResponseDTO })
+  @ApiOkResponse({ type: UserMeResponseDto }) // Оновлено тип відповіді
   @CatchError('Fetching user data')
-  async getMe(@Req() req: IAuthorizedRequest): Promise<{ id: any; email: any; role: string; }> {
+  async getMe(@Req() req: IAuthorizedRequest): Promise<UserMeResponseDto> {
+    this.logger.log(`Fetching user data for user ${req.user.id}`);
     const user = await this.userService.findById(req.user.id);
 
     if (!user) {
@@ -29,10 +29,21 @@ export class UserController {
       throw new NotFoundException('User not found');
     }
 
+    const companies = user.companyUsers.map(cu => ({
+      id: cu.company.id,
+      name: cu.company.name,
+      status: cu.company.status,
+    }));
+
+    const companyRoles = await this.userService.getUserRoles(req.user.id);
+
     return {
       id: user.id,
       email: user.email,
+      name: user.name,
       role: user.role?.name ?? 'employee',
+      companies,
+      companyRoles,
     };
   }
 }

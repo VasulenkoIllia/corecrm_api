@@ -31,8 +31,8 @@ export class InvitationService {
     const director = await this.prisma.user.findUnique({
       where: { id: directorId },
       include: {
-        role: true,
-        companies: { where: { companyId }, include: { company: true } },
+        role: true, // Додано для доступу до director.role
+        companyUsers: { where: { companyId }, include: { company: true, companyRoles: { include: { companyRole: true } } } },
       },
     });
 
@@ -44,7 +44,7 @@ export class InvitationService {
       this.logger.warn(`User ${directorId} is not a director`);
       throw new UnauthorizedException('Only directors can create invitations');
     }
-    if (!director.companies.length) {
+    if (!director.companyUsers.length) {
       this.logger.warn(`User ${directorId} not associated with company ${companyId}`);
       throw new UnauthorizedException('User not associated with the company');
     }

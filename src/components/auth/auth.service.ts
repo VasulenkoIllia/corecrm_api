@@ -58,8 +58,8 @@ export class AuthService {
 
       let companyId: number | undefined;
       if (user.role?.name !== 'superadmin') {
-        const companyUser = await this.userService.findCompanyUser(user.id);
-        companyId = companyUser.companyId;
+        const companyUsers = await this.prisma.companyUsers.findMany({ where: { userId: user.id } });
+        companyId = companyUsers.length > 0 ? companyUsers[0].companyId : undefined;
       }
 
       const payload: IJwtPayload = {
@@ -105,12 +105,23 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
+    const companyUsers = user.companyUsers.map(cu => ({
+      id: cu.id,
+      companyId: cu.companyId,
+      company: cu.company,
+      companyRoles: cu.companyRoles.map(cr => ({
+        id: cr.companyRole.id,
+        name: cr.companyRole.name,
+        description: cr.companyRole.description,
+      })),
+    }));
+
     return {
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role?.name ?? 'employee',
-      company: user.companies[0]?.company,
+      companyUsers,
     };
   }
 
@@ -139,8 +150,8 @@ export class AuthService {
       const director = await this.prisma.user.findUnique({
         where: { id: directorId },
         include: {
-          role: true,
-          companies: { where: { companyId }, include: { company: true } },
+          role: true, // Додано для доступу до director.role
+          companyUsers: { where: { companyId }, include: { company: true, companyRoles: { include: { companyRole: true } } } },
         },
       });
 
@@ -154,7 +165,7 @@ export class AuthService {
         this.logger.warn(`User ${directorId} is not a director`);
         throw new UnauthorizedException('Only directors can create invitations');
       }
-      if (!director.companies.length) {
+      if (!director.companyUsers.length) {
         this.logger.warn(`User ${directorId} not associated with company ${companyId}`);
         throw new UnauthorizedException('User not associated with the company');
       }
@@ -227,8 +238,8 @@ export class AuthService {
 
       let companyId: number | undefined;
       if (user.role?.name !== 'superadmin') {
-        const companyUser = await this.userService.findCompanyUser(user.id);
-        companyId = companyUser.companyId;
+        const companyUsers = await this.prisma.companyUsers.findMany({ where: { userId: user.id } });
+        companyId = companyUsers.length > 0 ? companyUsers[0].companyId : undefined;
       }
 
       const newPayload: IJwtPayload = {
@@ -314,6 +325,4 @@ export class AuthService {
     this.logger.log(`Password reset successfully for user ID: ${user.id}`);
     return { message: 'Password reset successfully' };
   }
-
-
 }

@@ -17,6 +17,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { HttpExceptionFilter } from './common/exceptions/http-exception.filter';
 import { APP_GUARD } from '@nestjs/core';
 import { SwaggerInfrastructure } from './infrastructure/swagger/swagger.infrastructure';
+import { AccessControlModule } from './components/access-control/access-control.module';
 
 const throttlerGuardProvider: Provider = {
   provide: APP_GUARD,
@@ -54,6 +55,7 @@ const throttlerGuardProvider: Provider = {
     ModulesModule,
     ClientsModule,
     CarsModule,
+    AccessControlModule
   ],
   providers: [HttpExceptionFilter, throttlerGuardProvider, SwaggerInfrastructure],
 })

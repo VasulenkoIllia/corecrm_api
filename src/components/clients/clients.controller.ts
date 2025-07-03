@@ -1,5 +1,26 @@
-import { Body, Controller, HttpCode, HttpStatus, Logger, Param, ParseIntPipe, RequestMethod } from '@nestjs/common';
-import { ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+} from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiBody,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AccessControlEndpoint } from '../../common/decorators/access-control-endpoint.decorator';
 import { CatchError } from '../../common/decorators/catch-error.decorator';
 import { User } from '../../common/decorators/user.decorator';
@@ -8,6 +29,15 @@ import { ClientsService } from './clients.service';
 import { CreateClientDto } from '../../common/dto/client/create-client.dto';
 import { ClientResponseDto } from '../../common/dto/client/client-response.dto';
 import { UpdateClientDto } from '../../common/dto/client/update-client.dto';
+
+// Константи для модулів і дій
+const MODULE_NAME = 'clients';
+const ACTIONS = {
+  CREATE: 'create' as const,
+  READ: 'read' as const,
+  UPDATE: 'update' as const,
+  DELETE: 'delete' as const,
+};
 
 /**
  * Контролер для управління клієнтами
@@ -20,21 +50,24 @@ export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}
 
   /**
-   * Створення нового клієнта
+   * Створює нового клієнта для компанії
    */
-  @AccessControlEndpoint('create', { module: 'clients', action: 'create' })
+  @Post()
+  @AccessControlEndpoint('create', { module: MODULE_NAME, action: ACTIONS.CREATE })
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Створити нового клієнта' })
+  @ApiOperation({ summary: 'Create a new client' })
   @ApiOkResponse({
     status: 201,
     description: 'Client successfully created',
     type: ClientResponseDto,
   })
+  @ApiBadRequestResponse({ description: 'Invalid input data' })
+  @ApiForbiddenResponse({ description: 'Access denied' })
   @ApiBody({
     type: CreateClientDto,
     examples: {
       example1: {
-        summary: 'Приклад створення клієнта',
+        summary: 'Example of creating a client',
         value: {
           firstName: 'John',
           lastName: 'Doe',
@@ -45,63 +78,89 @@ export class ClientsController {
       },
     },
   })
-  @CatchError('Створення клієнта')
+  @CatchError('Creating client')
   async createClient(@Body() createClientDto: CreateClientDto, @User() user: IJwtPayload) {
-    this.logger.log(`Creating client for company ${createClientDto.companyId} by user ${user.id}`);
+    this.logger.log({
+      message: 'Creating client',
+      companyId: createClientDto.companyId,
+      userId: user.id,
+      method: 'createClient',
+    });
     return this.clientsService.createClient(createClientDto, user.id);
   }
+
   /**
-   * Отримання списку клієнтів компанії
+   * Отримує список клієнтів компанії
    */
-  @AccessControlEndpoint('get', { module: 'clients', action: 'read' }, RequestMethod.GET)
+  @Get()
+  @AccessControlEndpoint('get', { module: MODULE_NAME, action: ACTIONS.READ })
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Отримати список клієнтів компанії' })
+  @ApiOperation({ summary: 'Get list of company clients' })
   @ApiOkResponse({
     status: 200,
-    description: 'List of clients',
+    description: 'List of clients retrieved successfully',
     type: [ClientResponseDto],
   })
-  @CatchError('Отримання клієнтів')
+  @ApiForbiddenResponse({ description: 'Access denied' })
+  @CatchError('Fetching clients')
   async getClients(@User() user: IJwtPayload) {
-    this.logger.log(`Fetching clients for company ${user.companyId} by user ${user.id}`);
+    this.logger.log({
+      message: 'Fetching clients',
+      companyId: user.companyId,
+      userId: user.id,
+      method: 'getClients',
+    });
     return this.clientsService.getClients(user.companyId, user.id);
   }
 
   /**
-   * Отримання клієнта за ідентифікатором
+   * Отримує дані клієнта за ідентифікатором
    */
-  @AccessControlEndpoint(':id', { module: 'clients', action: 'read' })
+  @Get(':id')
+  @AccessControlEndpoint(':id', { module: MODULE_NAME, action: ACTIONS.READ })
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Отримати клієнта за ID' })
+  @ApiOperation({ summary: 'Get client by ID' })
   @ApiOkResponse({
     status: 200,
-    description: 'Client data',
+    description: 'Client data retrieved successfully',
     type: ClientResponseDto,
   })
-  @ApiParam({ name: 'id', description: 'ID клієнта', type: Number })
-  @CatchError('Отримання клієнта')
+  @ApiNotFoundResponse({ description: 'Client not found' })
+  @ApiForbiddenResponse({ description: 'Access denied' })
+  @ApiParam({ name: 'id', description: 'Client ID', type: Number })
+  @CatchError('Fetching client')
   async getClientById(@Param('id', ParseIntPipe) id: number, @User() user: IJwtPayload) {
-    this.logger.log(`Fetching client ${id} for company ${user.companyId} by user ${user.id}`);
+    this.logger.log({
+      message: 'Fetching client',
+      clientId: id,
+      companyId: user.companyId,
+      userId: user.id,
+      method: 'getClientById',
+    });
     return this.clientsService.getClientById(id, user.companyId, user.id);
   }
 
   /**
-   * Оновлення даних клієнта
+   * Оновлює дані клієнта за ідентифікатором
    */
-  @AccessControlEndpoint(':id', { module: 'clients', action: 'update' })
+  @Put(':id')
+  @AccessControlEndpoint(':id', { module: MODULE_NAME, action: ACTIONS.UPDATE })
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Оновити дані клієнта' })
+  @ApiOperation({ summary: 'Update client data' })
   @ApiOkResponse({
     status: 200,
-    description: 'Client updated',
+    description: 'Client updated successfully',
     type: ClientResponseDto,
   })
-  @ApiParam({ name: 'id', description: 'ID клієнта', type: Number })
+  @ApiNotFoundResponse({ description: 'Client not found' })
+  @ApiBadRequestResponse({ description: 'Invalid input data' })
+  @ApiForbiddenResponse({ description: 'Access denied' })
+  @ApiParam({ name: 'id', description: 'Client ID', type: Number })
   @ApiBody({
     type: UpdateClientDto,
     examples: {
       example1: {
-        summary: 'Приклад оновлення клієнта',
+        summary: 'Example of updating a client',
         value: {
           firstName: 'John',
           lastName: 'Smith',
@@ -111,31 +170,48 @@ export class ClientsController {
       },
     },
   })
-  @CatchError('Оновлення клієнта')
+  @CatchError('Updating client')
   async updateClient(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateClientDto: UpdateClientDto,
     @User() user: IJwtPayload,
   ) {
-    this.logger.log(`Updating client ${id} for company ${user.companyId} by user ${user.id}`);
+    this.logger.log({
+      message: 'Updating client',
+      clientId: id,
+      companyId: user.companyId,
+      userId: user.id,
+      method: 'updateClient',
+    });
     return this.clientsService.updateClient(id, updateClientDto, user.companyId, user.id);
   }
 
   /**
-   * Видалення клієнта
+   * Видаляє клієнта за ідентифікатором
    */
-  @AccessControlEndpoint(':id', { module: 'clients', action: 'delete' })
+  @Delete(':id')
+  @AccessControlEndpoint(':id', { module: MODULE_NAME, action: ACTIONS.DELETE })
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Видалити клієнта' })
+  @ApiOperation({ summary: 'Delete client' })
   @ApiOkResponse({
     status: 200,
-    description: 'Client deleted',
-    schema: { properties: { message: { type: 'string', example: 'Client deleted' } } },
+    description: 'Client deleted successfully',
+    type: class DeleteResponseDto {
+      message: string;
+    },
   })
-  @ApiParam({ name: 'id', description: 'ID клієнта', type: Number })
-  @CatchError('Видалення клієнта')
+  @ApiNotFoundResponse({ description: 'Client not found' })
+  @ApiForbiddenResponse({ description: 'Access denied' })
+  @ApiParam({ name: 'id', description: 'Client ID', type: Number })
+  @CatchError('Deleting client')
   async deleteClient(@Param('id', ParseIntPipe) id: number, @User() user: IJwtPayload) {
-    this.logger.log(`Deleting client ${id} for company ${user.companyId} by user ${user.id}`);
+    this.logger.log({
+      message: 'Deleting client',
+      clientId: id,
+      companyId: user.companyId,
+      userId: user.id,
+      method: 'deleteClient',
+    });
     return this.clientsService.deleteClient(id, user.companyId, user.id);
   }
 }

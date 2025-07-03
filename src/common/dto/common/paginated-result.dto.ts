@@ -1,39 +1,23 @@
-import { ApiProperty } from '@nestjs/swagger';
 import { IsArray, IsInt, IsPositive } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
-// DTO для пагінованих відповідей API
+// DTO for paginated API responses
 export class PaginatedResultDTO<T = unknown> {
-  // Масив елементів на поточній сторінці
-  @ApiProperty({
-    description: 'Array of items on the current page',
-    isArray: true,
-  })
+  @ApiProperty({ example: [{ id: 1, name: 'John' }], description: 'Array of items on the current page', isArray: true })
   @IsArray()
   items: T[];
 
-  // Загальна кількість елементів
-  @ApiProperty({
-    description: 'Total number of items',
-    example: 100,
-  })
+  @ApiProperty({ example: 100, description: 'Total number of items' })
   @IsInt()
   @IsPositive()
   total: number;
 
-  // Поточна сторінка
-  @ApiProperty({
-    description: 'Current page number',
-    example: 1,
-  })
+  @ApiProperty({ example: 1, description: 'Current page number' })
   @IsInt()
   @IsPositive()
   page: number;
 
-  // Розмір сторінки
-  @ApiProperty({
-    description: 'Number of items per page',
-    example: 10,
-  })
+  @ApiProperty({ example: 10, description: 'Number of items per page' })
   @IsInt()
   @IsPositive()
   pageSize: number;

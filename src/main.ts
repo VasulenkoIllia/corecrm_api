@@ -7,6 +7,8 @@ import * as winston from 'winston';
 import helmet from 'helmet';
 import compression from 'compression';
 import { NextFunction, Request, Response } from 'express';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppConfig } from './infrastructure/app-config/app-config.infrastructure';
 import { HttpExceptionFilter } from './common/exceptions/http-exception.filter';
 import { SwaggerInfrastructure } from './infrastructure/swagger/swagger.infrastructure';
@@ -52,26 +54,24 @@ async function bootstrap() {
           winston.format.errors({ stack: true }),
           process.env.NODE_ENV === 'development'
             ? winston.format.combine(
-              winston.format.colorize(),
-              winston.format.printf(({ level, message, context, timestamp, stack, ...meta }) => {
-                const metaString = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : '';
-                return stack
-                  ? `${timestamp} [${context || 'App'}] ${level}: ${message}\n${stack}${metaString}`
-                  : `${timestamp} [${context || 'App'}] ${level}: ${message}${metaString}`;
-              }),
-            )
+                winston.format.colorize(),
+                winston.format.printf(({ level, message, context, timestamp, stack, ...meta }) => {
+                  const metaString = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : '';
+                  return stack
+                    ? `${timestamp} [${context || 'App'}] ${level}: ${message}\n${stack}${metaString}`
+                    : `${timestamp} [${context || 'App'}] ${level}: ${message}${metaString}`;
+                }),
+              )
             : winston.format.json(),
         ),
       }),
     ],
   });
 
-  // Створення додатку
-  // const app = await NestFactory.create(AppModule, {
-  //   logger: winstonLogger,
-  // });
-
-  const app = await NestFactory.create(AppModule);
+  // Створення додатку з типом NestExpressApplication
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    // logger: winstonLogger,
+  });
 
   // Отримання конфігурації та сервісів
   const appConfig = app.get(AppConfig);
@@ -105,6 +105,11 @@ async function bootstrap() {
 
   // API версіонування
   app.setGlobalPrefix('api');
+
+  // Serve static files (e.g., theme-toggle.js)
+  app.useStaticAssets(join(__dirname, '..', 'public'), {
+    prefix: '/static/',
+  });
 
   // Ініціалізація Swagger
   const swagger = app.get(SwaggerInfrastructure);

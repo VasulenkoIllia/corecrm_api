@@ -1,18 +1,24 @@
 import { IsBoolean, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
-class PermissionDto {
+export class PermissionDto {
+  @ApiProperty({ example: 'clients', description: 'Module name for permissions' })
   @IsString()
   module: string;
 
-  @IsBoolean()
-  read: boolean;
-
+  @ApiProperty({ example: true, description: 'Permission to create data' })
   @IsBoolean()
   create: boolean;
 
-  @IsBoolean()
-  update: boolean;
-
+  @ApiProperty({ example: true, description: 'Permission to delete data' })
   @IsBoolean()
   delete: boolean;
+
+  @ApiProperty({ example: true, description: 'Permission to read data' })
+  @IsBoolean()
+  read: boolean;
+
+  @ApiProperty({ example: true, description: 'Permission to update data' })
+  @IsBoolean()
+  update: boolean;
 }

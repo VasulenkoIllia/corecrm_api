@@ -1,47 +1,27 @@
-import { ApiProperty } from '@nestjs/swagger';
 import { IsArray, IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
-// DTO для параметрів пошуку API
+// DTO for API search parameters
 export class SearchParameterDTO<T = unknown> {
-  // Поля, за якими виконується пошук
-  @ApiProperty({
-    description: 'Fields to search by',
-    isArray: true,
-    required: false,
-  })
+  @ApiProperty({ example: ['name', 'email'], description: 'Fields to search by', required: false })
   @IsArray()
   @IsOptional()
   searchBy?: T[];
 
-  // Текстовий запит для пошуку
-  @ApiProperty({
-    description: 'Search query string',
-    example: 'John',
-    required: false,
-  })
-  @IsString()
+  @ApiProperty({ example: 'John', description: 'Search query string', required: false })
   @IsOptional()
+  @IsString()
   query?: string;
 
-  // Номер сторінки
-  @ApiProperty({
-    description: 'Page number',
-    example: 1,
-    required: false,
-  })
+  @ApiProperty({ example: 1, description: 'Page number', required: false })
+  @IsOptional()
   @IsInt()
   @IsPositive()
-  @IsOptional()
   page?: number;
 
-  // Розмір сторінки
-  @ApiProperty({
-    description: 'Number of items per page',
-    example: 10,
-    required: false,
-  })
+  @ApiProperty({ example: 10, description: 'Number of items per page', required: false })
+  @IsOptional()
   @IsInt()
   @IsPositive()
-  @IsOptional()
   pageSize?: number;
 }

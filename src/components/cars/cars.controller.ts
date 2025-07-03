@@ -1,126 +1,139 @@
-import { Body, Controller, HttpCode, HttpStatus, Logger, Param, RequestMethod, SetMetadata } from '@nestjs/common';
-import { CarsService } from './cars.service';
-import { ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { SecureEndpoint } from '../../common/decorators/secure-endpoint.decorator';
+import { Body, Controller, Get, HttpCode, HttpStatus, Logger, Param, ParseIntPipe, Post } from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiBody,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import { AccessControlEndpoint } from '../../common/decorators/access-control-endpoint.decorator';
 import { CatchError } from '../../common/decorators/catch-error.decorator';
 import { User } from '../../common/decorators/user.decorator';
 import { IJwtPayload } from '../../common/interfaces/common/jwt-payload.interface';
+import { CarsService } from './cars.service';
 import { CreateCarDto } from '../../common/dto/car/create-car.dto';
+import { CarResponseDto } from '../../common/dto/car/car-response.dto'; // Припускаю, що такий DTO існує
+
+// Константи для модуля та дій
+const MODULE_NAME = 'cars';
+const ACTIONS = {
+  READ: 'read' as const,
+  CREATE: 'create' as const,
+};
 
 /**
  * Контролер для управління автомобілями
  */
-@ApiTags('cars')
+@ApiTags('Cars')
 @Controller('cars')
-@SetMetadata('module', 'cars')
 export class CarsController {
   private readonly logger = new Logger(CarsController.name);
 
   constructor(private readonly carsService: CarsService) {}
 
-  // @SecureEndpoint('vin-decode', RequestMethod.POST)
-  // @HttpCode(HttpStatus.OK)
-  // @ApiOperation({ summary: 'Декодувати VIN (mock для dev)' })
-  // @ApiOkResponse({
-  //   status: 200,
-  //   description: 'Decoded car data',
-  //   schema: { properties: { data: { type: 'object' } } }
-  // })
-  // @ApiBody({
-  //   type: VinDecodeDto,
-  //   examples: {
-  //     example1: {
-  //       summary: 'Приклад декодування VIN',
-  //       value: { vin: '1HGCM82633A123456' },
-  //     },
-  //   },
-  // })
-  // @CatchError('Декодування VIN')
-  // async vinDecode(@Body() vinDecodeDto: VinDecodeDto, @User() user: IJwtPayload) {
-  //   console.log(111);
-  //   return this.carsService.vinDecode(vinDecodeDto, user.companyId, user.id);
-  // }
-
   /**
-   * Отримання деталей автомобіля за ідентифікатором
+   * Отримує деталі автомобіля за ідентифікатором
    */
-  @SecureEndpoint(':id', RequestMethod.GET)
+  @Get(':id')
+  @AccessControlEndpoint(':id', { module: MODULE_NAME, action: ACTIONS.READ })
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Отримати деталі автомобіля' })
+  @ApiOperation({ summary: 'Get car details by ID' })
   @ApiOkResponse({
     status: 200,
-    description: 'Car details',
-    schema: { properties: { data: { type: 'object' } } }
+    description: 'Car details retrieved successfully',
+    type: CarResponseDto,
   })
-  @ApiParam({ name: 'id', description: 'ID автомобіля', example: 1 })
-  @CatchError('Отримання деталей автомобіля')
-  async getCar(@Param('id') id: string, @User() user: IJwtPayload) {
-    this.logger.log(`Fetching car ${id} for company ${user.companyId} by user ${user.id}`);
-    return this.carsService.getCar(+id, user.companyId, user.id);
+  @ApiNotFoundResponse({ description: 'Car not found' })
+  @ApiForbiddenResponse({ description: 'Access denied' })
+  @ApiParam({ name: 'id', description: 'Car ID', type: Number })
+  @CatchError('Fetching car details')
+  async getCar(@Param('id', ParseIntPipe) id: number, @User() user: IJwtPayload) {
+    this.logger.log({
+      message: 'Fetching car details',
+      carId: id,
+      companyId: user.companyId,
+      userId: user.id,
+      method: 'getCar',
+    });
+    return this.carsService.getCar(id, user.companyId, user.id);
   }
-}
-
-/**
- * Контролер для управління автомобілями клієнтів
- */
-@ApiTags('cars')
-@Controller('cars')
-@SetMetadata('module', 'cars')
-export class ClientsCarsController {
-  private readonly logger = new Logger(ClientsCarsController.name);
-
-  constructor(private readonly carsService: CarsService) {}
 
   /**
-   * Додавання автомобіля до клієнта
+   * Додає автомобіль до клієнта
    */
-  @SecureEndpoint(':id/cars', RequestMethod.POST)
+  @Post(':id/cars')
+  @AccessControlEndpoint(':id/cars', { module: MODULE_NAME, action: ACTIONS.CREATE })
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Додати автомобіль до клієнта' })
+  @ApiOperation({ summary: 'Add car to client' })
   @ApiOkResponse({
     status: 201,
-    description: 'Car added',
-    schema: { properties: { message: { type: 'string' }, data: { type: 'object' } } }
+    description: 'Car added successfully',
+    type: CarResponseDto, // Припускаю, що DTO існує
   })
-  @ApiParam({ name: 'id', description: 'ID клієнта', example: 1 })
+  @ApiBadRequestResponse({ description: 'Invalid input data' })
+  @ApiNotFoundResponse({ description: 'Client not found' })
+  @ApiForbiddenResponse({ description: 'Access denied' })
+  @ApiParam({ name: 'id', description: 'Client ID', type: Number })
   @ApiBody({
     type: CreateCarDto,
     examples: {
       example1: {
-        summary: 'Приклад створення автомобіля',
+        summary: 'Example of adding a car',
         value: {
           vin: '1HGCM82633A123456',
           make: 'Toyota',
           model: 'Camry',
           year: 2020,
-          color: 'Сріблястий',
-          licensePlate: 'АВ1234ВІ',
-          notes: 'Регулярне обслуговування',
+          color: 'Silver',
+          licensePlate: 'AB1234BI',
+          notes: 'Regular maintenance',
         },
       },
     },
   })
-  @CatchError('Додавання автомобіля до клієнта')
-  async addCar(@Param('id') clientId: string, @Body() createCarDto: CreateCarDto, @User() user: IJwtPayload) {
-    this.logger.log(`Adding car for client ${clientId} in company ${user.companyId} by user ${user.id}`);
-    return this.carsService.addCar(+clientId, createCarDto, user.companyId, user.id);
+  @CatchError('Adding car to client')
+  async addCar(
+    @Param('id', ParseIntPipe) clientId: number,
+    @Body() createCarDto: CreateCarDto,
+    @User() user: IJwtPayload,
+  ) {
+    this.logger.log({
+      message: 'Adding car to client',
+      clientId,
+      companyId: user.companyId,
+      userId: user.id,
+      method: 'addCar',
+    });
+    return this.carsService.addCar(clientId, createCarDto, user.companyId, user.id);
   }
 
   /**
-   * Отримання списку автомобілів клієнта
+   * Отримує список автомобілів клієнта
    */
-  @SecureEndpoint(':id/cars', RequestMethod.GET)
+  @Get(':id/cars')
+  @AccessControlEndpoint(':id/cars', { module: MODULE_NAME, action: ACTIONS.READ })
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Отримати список автомобілів клієнта' })
+  @ApiOperation({ summary: 'Get list of client cars' })
   @ApiOkResponse({
     status: 200,
-    description: 'List of client\'s cars',
-    schema: { properties: { data: { type: 'array', items: { type: 'object' } } } }
+    description: 'List of client cars retrieved successfully',
+    type: [CarResponseDto], // Припускаю, що DTO існує
   })
-  @ApiParam({ name: 'id', description: 'ID клієнта', example: 1 })
-  @CatchError('Отримання автомобілів клієнта')
-  async getClientCars(@Param('id') clientId: string, @User() user: IJwtPayload) {
-    this.logger.log(`Fetching cars for client ${clientId} in company ${user.companyId} by user ${user.id}`);
-    return this.carsService.getClientCars(+clientId, user.companyId, user.id);
+  @ApiNotFoundResponse({ description: 'Client not found' })
+  @ApiForbiddenResponse({ description: 'Access denied' })
+  @ApiParam({ name: 'id', description: 'Client ID', type: Number })
+  @CatchError('Fetching client cars')
+  async getClientCars(@Param('id', ParseIntPipe) clientId: number, @User() user: IJwtPayload) {
+    this.logger.log({
+      message: 'Fetching client cars',
+      clientId,
+      companyId: user.companyId,
+      userId: user.id,
+      method: 'getClientCars',
+    });
+    return this.carsService.getClientCars(clientId, user.companyId, user.id);
   }
 }
